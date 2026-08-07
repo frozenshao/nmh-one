@@ -1,6 +1,5 @@
 import React, { useState, useRef } from "react";
 import { Project, ComplianceItem } from "../types";
-import { apiFetch } from "../lib/apiFetch";
 import { 
   ArrowLeft, Upload, FileText, CheckCircle2, AlertCircle, Sparkles, Download, 
   ChevronRight, RefreshCw, Layers, ShieldCheck, Database, FileSpreadsheet, Image,
@@ -18,7 +17,7 @@ const SearchableSingleSelect = ({
   value,
   onChange,
   options,
-  placeholder = "璇烽€夋嫨瀛楁"
+  placeholder = "请选择字段"
 }: {
   value: string;
   onChange: (val: string) => void;
@@ -41,7 +40,7 @@ const SearchableSingleSelect = ({
         className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 text-left flex items-center justify-between shadow-3xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
       >
         <span className="truncate">{value || placeholder}</span>
-        <span className="text-slate-400 ml-1 text-[9px]">鈻?/span>
+        <span className="text-slate-400 ml-1 text-[9px]">▼</span>
       </button>
 
       {isOpen && (
@@ -51,7 +50,7 @@ const SearchableSingleSelect = ({
             <div className="flex items-center border border-slate-200 rounded px-2 py-1 bg-slate-50">
               <input
                 type="text"
-                placeholder="鎼滅储瀛楁..."
+                placeholder="搜索字段..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-transparent border-none text-xs focus:outline-none focus:ring-0 p-1"
@@ -63,12 +62,13 @@ const SearchableSingleSelect = ({
                   onClick={() => setSearch("")}
                   className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
                 >
-                  鉁?                </button>
+                  ✕
+                </button>
               )}
             </div>
             <div className="space-y-0.5">
               {filteredOptions.length === 0 ? (
-                <p className="text-center text-slate-400 text-[10px] py-1">鏈壘鍒板尮閰嶇殑瀛楁</p>
+                <p className="text-center text-slate-400 text-[10px] py-1">未找到匹配的字段</p>
               ) : (
                 filteredOptions.map(opt => (
                   <div
@@ -120,12 +120,12 @@ const SplitFieldsMultiSelect = ({
       >
         <span className="truncate">
           {selected.length === 0 
-            ? "璇烽€夋嫨鏁版嵁鏍囩" 
+            ? "请选择数据标签" 
             : selected.length === 1 
               ? selected[0] 
               : `+${selected.length}`}
         </span>
-        <span className="text-slate-400 ml-1 text-[9px]">鈻?/span>
+        <span className="text-slate-400 ml-1 text-[9px]">▼</span>
       </button>
 
       {isOpen && (
@@ -136,7 +136,7 @@ const SplitFieldsMultiSelect = ({
             <div className="relative" onClick={(e) => e.stopPropagation()}>
               <input
                 type="text"
-                placeholder="鎼滅储鏁版嵁鏍囩..."
+                placeholder="搜索数据标签..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
@@ -147,14 +147,15 @@ const SplitFieldsMultiSelect = ({
                   onClick={() => setSearchQuery("")}
                   className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 font-bold text-xs"
                 >
-                  鉁?                </button>
+                  ✕
+                </button>
               )}
             </div>
             
             {/* Options List */}
             <div className="overflow-y-auto space-y-1 max-h-40">
               {filteredOptions.length === 0 ? (
-                <p className="text-center text-slate-400 text-xs py-2 font-medium">鏃犲尮閰嶉」</p>
+                <p className="text-center text-slate-400 text-xs py-2 font-medium">无匹配项</p>
               ) : (
                 filteredOptions.map(opt => {
                   const isChecked = selected.includes(opt);
@@ -279,72 +280,72 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
   });
 
   const [evaluationMethod, setEvaluationMethod] = useState<string>(() => {
-    return project.schemeInputs?.evaluationMethod || "K鍖垮悕";
+    return project.schemeInputs?.evaluationMethod || "K匿名";
   });
   const [scenarioType, setScenarioType] = useState<string>(() => {
     return project.schemeInputs?.scenarioType || "";
   });
 
-  // hospital infrastructure checklists (婊¤冻/寰呭畬鍠?鏃犳硶婊¤冻)
+  // hospital infrastructure checklists (满足/待完善/无法满足)
   const [envItems, setEnvItems] = useState<ComplianceItem[]>(() => {
     const defaultItems = [
-      { id: "env_1", name: "1锛夎韩浠借璇侊紙澶氬洜绱犻壌鍒級", desc: "", status: "", proofFile: null },
-      { id: "env_2", name: "2锛夎闂帶鍒讹紙鍔熻兘鏉冮檺+鏁版嵁鏉冮檺锛?, desc: "", status: "", proofFile: null },
-      { id: "env_3", name: "3锛夊畨鍏ㄩ殧绂伙紙涓嶅悓鎺ユ敹鏂归€昏緫/鐗╃悊闅旂锛?, desc: "", status: "", proofFile: null },
-      { id: "env_4", name: "4锛夊姞瀵嗕繚鎶わ紙鏁忔劅鏁版嵁鍔犲瘑瀛樺偍锛?, desc: "", status: "", proofFile: null },
-      { id: "env_5", name: "5锛夊畨鍏ㄤ紶杈擄紙浼犺緭鍔犲瘑锛?, desc: "", status: "", proofFile: null },
-      { id: "env_6", name: "6锛夋暟鎹攢姣侊紙浠诲姟瀹屾垚鍚庡垹闄ゅ師濮嬫暟鎹拰涓棿缁撴灉锛?, desc: "", status: "", proofFile: null },
-      { id: "env_7", name: "7锛夋暟鎹槻娉勬紡", desc: "", status: "", proofFile: null },
-      { id: "env_8", name: "8锛夐檮鍔犱俊鎭繚鎶わ紙鍋囧悕鍖栭檮鍔犱俊鎭殧绂诲姞瀵嗭級", desc: "", status: "", proofFile: null },
-      { id: "env_9", name: "9锛夋帴鍙ｅ畨鍏?, desc: "", status: "", proofFile: null },
-      { id: "env_10", name: "10锛夊畨鍏ㄥ璁?, desc: "", status: "", proofFile: null },
-      { id: "env_11", name: "11锛夊鍣ㄥ寲/铏氭嫙鍖栭殧绂汇€佺幆澧冪鎺э紙闃绘柇鏀诲嚮/闃叉闈為鏈熻緭鍏ヨ緭鍑猴級銆佸畬鏁存搷浣滄棩蹇?, desc: "", status: "", proofFile: null }
+      { id: "env_1", name: "1）身份认证（多因素鉴别）", desc: "", status: "", proofFile: null },
+      { id: "env_2", name: "2）访问控制（功能权限+数据权限）", desc: "", status: "", proofFile: null },
+      { id: "env_3", name: "3）安全隔离（不同接收方逻辑/物理隔离）", desc: "", status: "", proofFile: null },
+      { id: "env_4", name: "4）加密保护（敏感数据加密存储）", desc: "", status: "", proofFile: null },
+      { id: "env_5", name: "5）安全传输（传输加密）", desc: "", status: "", proofFile: null },
+      { id: "env_6", name: "6）数据销毁（任务完成后删除原始数据和中间结果）", desc: "", status: "", proofFile: null },
+      { id: "env_7", name: "7）数据防泄漏", desc: "", status: "", proofFile: null },
+      { id: "env_8", name: "8）附加信息保护（假名化附加信息隔离加密）", desc: "", status: "", proofFile: null },
+      { id: "env_9", name: "9）接口安全", desc: "", status: "", proofFile: null },
+      { id: "env_10", name: "10）安全审计", desc: "", status: "", proofFile: null },
+      { id: "env_11", name: "11）容器化/虚拟化隔离、环境管控（阻断攻击/防止非预期输入输出）、完整操作日志", desc: "", status: "", proofFile: null }
     ];
     const saved = project.schemeInputs?.envItems || [];
     return defaultItems.map(item => {
       const matched = saved.find((s: any) => s.id === item.id || s.name === item.name);
       return {
         ...item,
-        status: matched ? (matched.status === '绗﹀悎' ? '婊¤冻' : matched.status === '涓嶇鍚? ? '寰呭畬鍠? : matched.status) : ""
+        status: matched ? (matched.status === '符合' ? '满足' : matched.status === '不符合' ? '待完善' : matched.status) : ""
       };
     });
   });
 
-  // Management measures checklists (婊¤冻/寰呭畬鍠?鏃犳硶婊¤冻)
+  // Management measures checklists (满足/待完善/无法满足)
   const [mgmtItems, setMgmtItems] = useState<ComplianceItem[]>(() => {
     const defaultItems = [
-      // 锛?锛夋暟鎹寔鏈夋柟
-      { id: "mgmt_holder_1", category: "鏁版嵁鎸佹湁鏂?, name: "1锛夋暟鎹祦閫氱鐞嗗埗搴?, desc: "", status: "", proofFile: null },
-      { id: "mgmt_holder_2", category: "鏁版嵁鎸佹湁鏂?, name: "2锛夊鏍搁渶姹傛柟浣跨敤鍦烘櫙銆佺洰鐨勫拰澶勭悊娴佺▼", desc: "", status: "", proofFile: null },
-      { id: "mgmt_holder_3", category: "鏁版嵁鎸佹湁鏂?, name: "3锛夊悎鍚岀害鏉燂紙鐩殑鑼冨洿/鏁版嵁淇濇姢涔夊姟/绂佹閲嶈瘑鍒?娉勯湶閫氱煡绛夛級", desc: "", status: "", proofFile: null },
-      { id: "mgmt_holder_4", category: "鏁版嵁鎸佹湁鏂?, name: "4锛夋槑纭汉鍛樿亴璐ｅ苟瀹氭湡鍩硅", desc: "", status: "", proofFile: null },
-      { id: "mgmt_holder_5", category: "鏁版嵁鎸佹湁鏂?, name: "5锛夌暀瀛樺尶鍚嶅寲绛栫暐銆佽鍒欏埗瀹?瀹℃牳/鏇存柊璁板綍", desc: "", status: "", proofFile: null },
-      { id: "mgmt_holder_6", category: "鏁版嵁鎸佹湁鏂?, name: "6锛夊埗瀹氬簲鎬ラ妗堝苟瀹氭湡婕旂粌", desc: "", status: "", proofFile: null },
-      { id: "mgmt_holder_7", category: "鏁版嵁鎸佹湁鏂?, name: "7锛夋寔缁洃鎺ч闄╋紝瀹氭湡鏇存柊绛栫暐", desc: "", status: "", proofFile: null },
-      { id: "mgmt_holder_8", category: "鏁版嵁鎸佹湁鏂?, name: "8锛夊鏍搁渶姹傛柟浣跨敤鍦烘櫙銆佺洰鐨勫拰澶勭悊娴佺▼", desc: "", status: "", proofFile: null },
+      // （1）数据持有方
+      { id: "mgmt_holder_1", category: "数据持有方", name: "1）数据流通管理制度", desc: "", status: "", proofFile: null },
+      { id: "mgmt_holder_2", category: "数据持有方", name: "2）审核需求方使用场景、目的和处理流程", desc: "", status: "", proofFile: null },
+      { id: "mgmt_holder_3", category: "数据持有方", name: "3）合同约束（目的范围/数据保护义务/禁止重识别/泄露通知等）", desc: "", status: "", proofFile: null },
+      { id: "mgmt_holder_4", category: "数据持有方", name: "4）明确人员职责并定期培训", desc: "", status: "", proofFile: null },
+      { id: "mgmt_holder_5", category: "数据持有方", name: "5）留存匿名化策略、规则制定/审核/更新记录", desc: "", status: "", proofFile: null },
+      { id: "mgmt_holder_6", category: "数据持有方", name: "6）制定应急预案并定期演练", desc: "", status: "", proofFile: null },
+      { id: "mgmt_holder_7", category: "数据持有方", name: "7）持续监控风险，定期更新策略", desc: "", status: "", proofFile: null },
+      { id: "mgmt_holder_8", category: "数据持有方", name: "8）审核需求方使用场景、目的和处理流程", desc: "", status: "", proofFile: null },
 
-      // 锛?锛夋暟鎹娇鐢ㄦ柟
-      { id: "mgmt_user_1", category: "鏁版嵁浣跨敤鏂?, name: "1锛夋寜鏈€灏戝鐢ㄥ師鍒欑敵璇锋暟鎹?, desc: "", status: "", proofFile: null },
-      { id: "mgmt_user_2", category: "鏁版嵁浣跨敤鏂?, name: "2锛夊悎鍚岀害鏉?, desc: "", status: "", proofFile: null },
-      { id: "mgmt_user_3", category: "鏁版嵁浣跨敤鏂?, name: "3锛夌姝㈤噸璇嗗埆琛屼负", desc: "", status: "", proofFile: null },
-      { id: "mgmt_user_4", category: "鏁版嵁浣跨敤鏂?, name: "4锛夊鎺ヨЕ浜哄憳鍩硅骞剁缃蹭繚瀵嗗崗璁?, desc: "", status: "", proofFile: null },
-      { id: "mgmt_user_5", category: "鏁版嵁浣跨敤鏂?, name: "5锛夋潈闄愮鑱岀宀楀洖鏀舵満鍒?, desc: "", status: "", proofFile: null },
-      { id: "mgmt_user_6", category: "鏁版嵁浣跨敤鏂?, name: "6锛夋暟鎹娇鐢ㄧ洃鎺?, desc: "", status: "", proofFile: null },
-      { id: "mgmt_user_7", category: "鏁版嵁浣跨敤鏂?, name: "7锛夋暟鎹攢姣?, desc: "", status: "", proofFile: null },
+      // （2）数据使用方
+      { id: "mgmt_user_1", category: "数据使用方", name: "1）按最少够用原则申请数据", desc: "", status: "", proofFile: null },
+      { id: "mgmt_user_2", category: "数据使用方", name: "2）合同约束", desc: "", status: "", proofFile: null },
+      { id: "mgmt_user_3", category: "数据使用方", name: "3）禁止重识别行为", desc: "", status: "", proofFile: null },
+      { id: "mgmt_user_4", category: "数据使用方", name: "4）对接触人员培训并签署保密协议", desc: "", status: "", proofFile: null },
+      { id: "mgmt_user_5", category: "数据使用方", name: "5）权限离职离岗回收机制", desc: "", status: "", proofFile: null },
+      { id: "mgmt_user_6", category: "数据使用方", name: "6）数据使用监控", desc: "", status: "", proofFile: null },
+      { id: "mgmt_user_7", category: "数据使用方", name: "7）数据销毁", desc: "", status: "", proofFile: null },
 
-      // 锛?锛夋暟鎹繍钀ユ柟
-      { id: "mgmt_operator_1", category: "鏁版嵁杩愯惀鏂?, name: "1锛夋彁渚涘苟鍏憡瀹夊叏鎶€鏈兘鍔?, desc: "", status: "", proofFile: null },
-      { id: "mgmt_operator_2", category: "鏁版嵁杩愯惀鏂?, name: "2锛夊畾鏈熷畨鍏ㄨ瘎浼?, desc: "", status: "", proofFile: null },
-      { id: "mgmt_operator_3", category: "鏁版嵁杩愯惀鏂?, name: "3锛変弗鏍艰闂帶鍒?, desc: "", status: "", proofFile: null },
-      { id: "mgmt_operator_4", category: "鏁版嵁杩愯惀鏂?, name: "4锛夊鐩稿叧鏂规搷浣滅暀瀛樻棩蹇楀苟瀹氭湡瀹¤", desc: "", status: "", proofFile: null },
-      { id: "mgmt_operator_5", category: "鏁版嵁杩愯惀鏂?, name: "5锛夊簲鎬ラ妗堟紨缁?, desc: "", status: "", proofFile: null }
+      // （3）数据运营方
+      { id: "mgmt_operator_1", category: "数据运营方", name: "1）提供并公告安全技术能力", desc: "", status: "", proofFile: null },
+      { id: "mgmt_operator_2", category: "数据运营方", name: "2）定期安全评估", desc: "", status: "", proofFile: null },
+      { id: "mgmt_operator_3", category: "数据运营方", name: "3）严格访问控制", desc: "", status: "", proofFile: null },
+      { id: "mgmt_operator_4", category: "数据运营方", name: "4）对相关方操作留存日志并定期审计", desc: "", status: "", proofFile: null },
+      { id: "mgmt_operator_5", category: "数据运营方", name: "5）应急预案演练", desc: "", status: "", proofFile: null }
     ];
     const saved = project.schemeInputs?.mgmtItems || [];
     return defaultItems.map(item => {
       const matched = saved.find((s: any) => s.id === item.id || s.name === item.name);
       return {
         ...item,
-        status: matched ? (matched.status === '绗﹀悎' ? '婊¤冻' : matched.status === '涓嶇鍚? ? '寰呭畬鍠? : matched.status) : ""
+        status: matched ? (matched.status === '符合' ? '满足' : matched.status === '不符合' ? '待完善' : matched.status) : ""
       };
     });
   });
@@ -517,14 +518,14 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
   };
 
   const splitOptions = [
-    "鎮ｈ€呭鍚?,
-    "鍖荤敓濮撳悕",
-    "鍖婚櫌鍚嶇О",
-    "绉戝鍚嶇О",
-    "鎬у埆",
-    "骞撮緞",
-    "韬珮",
-    "浣撻噸"
+    "患者姓名",
+    "医生姓名",
+    "医院名称",
+    "科室名称",
+    "性别",
+    "年龄",
+    "身高",
+    "体重"
   ];
 
   // Pre-fill quick scenario template
@@ -532,7 +533,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
     setUsageScenario(text);
   };
 
-  // Change compliance status (婊¤冻, 寰呭畬鍠? 鏃犳硶婊¤冻)
+  // Change compliance status (满足, 待完善, 无法满足)
   const handleStatusChange = (id: string, type: "env" | "mgmt", status: string) => {
     if (type === "env") {
       setEnvItems(prev => prev.map(item => {
@@ -556,91 +557,91 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
     // 1. Validation
     const anyEnabled = csvEnabled || dicomEnabled || imageEnabled;
     if (!anyEnabled) {
-      alert("鏍蜂緥鏁版嵁妯″潡锛欳SV鏂囨湰鏁版嵁銆丏ICOM褰卞儚鏁版嵁銆佸浘鐗囨暟鎹?鑷冲皯鏈変竴椤瑰繀椤婚€夋嫨銆愭湁銆戯紒");
+      alert("样例数据模块：CSV文本数据、DICOM影像数据、图片数据 至少有一项必须选择【有】！");
       return;
     }
 
     if (csvEnabled) {
       if (csvCategories.length === 0) {
-        alert("鎮ㄥ紑鍚簡CSV鏂囨湰鏁版嵁锛岃涓婁紶鑷冲皯涓€涓?.csv 鏍蜂緥鏂囦欢锛?);
+        alert("您开启了CSV文本数据，请上传至少一个 .csv 样例文件！");
         return;
       }
       const emptyCsvCat = csvCategories.find(c => !c.name || !c.name.trim());
       if (emptyCsvCat) {
-        alert("CSV鏂囨湰鏁版嵁涓瓨鍦ㄧ┖瀛愬垎绫诲悕绉帮紝璇疯緭鍏ュ畬鏁达紒");
+        alert("CSV文本数据中存在空子分类名称，请输入完整！");
         return;
       }
     }
 
     if (dicomEnabled) {
       if (dicomCategories.length === 0) {
-        alert("鎮ㄥ紑鍚簡DICOM褰卞儚鏁版嵁锛岃涓婁紶鑷冲皯涓€涓?.dcm 鏍蜂緥鏂囦欢锛?);
+        alert("您开启了DICOM影像数据，请上传至少一个 .dcm 样例文件！");
         return;
       }
       const emptyDicomCat = dicomCategories.find(c => !c.name || !c.name.trim());
       if (emptyDicomCat) {
-        alert("DICOM褰卞儚鏁版嵁涓瓨鍦ㄧ┖瀛愬垎绫诲悕绉帮紝璇疯緭鍏ュ畬鏁达紒");
+        alert("DICOM影像数据中存在空子分类名称，请输入完整！");
         return;
       }
     }
 
     if (imageEnabled) {
       if (imageCategories.length === 0) {
-        alert("鎮ㄥ紑鍚簡鍥剧墖鏁版嵁锛岃涓婁紶鑷冲皯涓€涓尰瀛﹀浘鐗囨枃浠讹紒");
+        alert("您开启了图片数据，请上传至少一个医学图片文件！");
         return;
       }
       const emptyImageCat = imageCategories.find(c => !c.name || !c.name.trim());
       if (emptyImageCat) {
-        alert("鍥剧墖鏁版嵁涓瓨鍦ㄧ┖瀛愬垎绫诲悕绉帮紝璇疯緭鍏ュ畬鏁达紒");
+        alert("图片数据中存在空子分类名称，请输入完整！");
         return;
       }
     }
 
     if (!dataScale.trim()) {
-      alert("璇疯緭鍏ユ暟鎹妯★紒");
+      alert("请输入数据规模！");
       return;
     }
 
     if (!usageScenario.trim()) {
-      alert("璇疯緭鍏ユ暟鎹殑浣跨敤鍦烘櫙璇存槑锛?);
+      alert("请输入数据的使用场景说明！");
       return;
     }
 
     if (!scenarioType) {
-      alert("璇烽€夋嫨鍦烘櫙绯绘暟锛?);
+      alert("请选择场景系数！");
       return;
     }
 
     // Check environment items: Required selection
     const unfilledEnv = envItems.find(item => item.status === "");
     if (unfilledEnv) {
-      alert(`璇峰鐜绯绘暟璇勪及椤?[${unfilledEnv.name}] 鍋氬嚭璇勪及閫夋嫨锛乣);
+      alert(`请对环境系数评估项 [${unfilledEnv.name}] 做出评估选择！`);
       return;
     }
 
     // Check management items: Required selection
     const unfilledMgmt = mgmtItems.find(item => item.status === "");
     if (unfilledMgmt) {
-      alert(`璇峰瀹夊叏绠＄悊鎺柦椤?[${unfilledMgmt.name}] 鍋氬嚭璇勪及閫夋嫨锛乣);
+      alert(`请对安全管理措施项 [${unfilledMgmt.name}] 做出评估选择！`);
       return;
     }
 
-    const minKVal = scenarioType === "缁勭粐鍐呴儴鍚屼竴涓簨涓氱兢鐨勬暟鎹祦閫? ? 3 :
-                     scenarioType === "缁勭粐鍐呴儴璺ㄤ簨涓氱兢鐨勬暟鎹祦閫? ? 4 :
-                     scenarioType === "缁勭粐澶栭儴涓ゆ柟鐨勬暟鎹祦閫? ? 5 :
-                     scenarioType === "缁勭粐澶栭儴澶氭柟鐨勬暟鎹祦閫? ? 6 : 20;
+    const minKVal = scenarioType === "组织内部同一个事业群的数据流通" ? 3 :
+                     scenarioType === "组织内部跨事业群的数据流通" ? 4 :
+                     scenarioType === "组织外部两方的数据流通" ? 5 :
+                     scenarioType === "组织外部多方的数据流通" ? 6 : 20;
 
-    const coeffVal = scenarioType === "缁勭粐鍐呴儴鍚屼竴涓簨涓氱兢鐨勬暟鎹祦閫? ? "1/3" :
-                      scenarioType === "缁勭粐鍐呴儴璺ㄤ簨涓氱兢鐨勬暟鎹祦閫? ? "1/4" :
-                      scenarioType === "缁勭粐澶栭儴涓ゆ柟鐨勬暟鎹祦閫? ? "1/5" :
-                      scenarioType === "缁勭粐澶栭儴澶氭柟鐨勬暟鎹祦閫? ? "1/6" : "1/20";
+    const coeffVal = scenarioType === "组织内部同一个事业群的数据流通" ? "1/3" :
+                      scenarioType === "组织内部跨事业群的数据流通" ? "1/4" :
+                      scenarioType === "组织外部两方的数据流通" ? "1/5" :
+                      scenarioType === "组织外部多方的数据流通" ? "1/6" : "1/20";
 
     // Trigger API call and Generation Screen
     setIsGenerating(true);
     setGenerationError("");
 
     try {
-      const apiPromise = apiFetch("/api/generate-scheme", {
+      const apiPromise = fetch("/api/generate-scheme", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -674,7 +675,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
       if (response.ok) {
         // Save the inputs to the backend to support regeneration
         try {
-          await apiFetch(`/api/projects/${project.id}/scheme-inputs`, {
+          await fetch(`/api/projects/${project.id}/scheme-inputs`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -712,7 +713,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
           project.expectedK = minKVal;
 
           // Clear isRegeneratingPending status as it is now successfully generated
-          await apiFetch(`/api/projects/${project.id}`, {
+          await fetch(`/api/projects/${project.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ isRegeneratingPending: false })
@@ -736,11 +737,11 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
           onSchemeGenerated();
         }
       } else {
-        throw new Error(data.error || "鏈嶅姟绔湪瑁呴厤鏂规鏂囨。鏃跺彂鐢熸湭鐭ュ紓甯?);
+        throw new Error(data.error || "服务端在装配方案文档时发生未知异常");
       }
     } catch (err: any) {
-      setGenerationError(err.message || "杩炴帴鏈嶅姟鍣ㄨ閰嶅紩鎿庡け璐ワ紝璇烽噸璇曘€?);
-      alert(err.message || "瑁呴厤鏂规鏃堕亣鍒板紓甯革紝璇锋鏌ュ悗绔湇鍔°€?);
+      setGenerationError(err.message || "连接服务器装配引擎失败，请重试。");
+      alert(err.message || "装配方案时遇到异常，请检查后端服务。");
     } finally {
       setIsGenerating(false);
     }
@@ -765,7 +766,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
       <head>
         <meta charset="utf-8">
-        <title>${project.name} 鏁版嵁鍘绘爣璇嗗寲鍖垮悕鏂规</title>
+        <title>${project.name} 数据去标识化匿名方案</title>
         <style>
           body { font-family: "Microsoft YaHei", SimSun, sans-serif; line-height: 1.6; padding: 40px; color: #1f2937; }
           h1 { font-family: "Microsoft YaHei", SimHei; color: #1e3a8a; text-align: center; margin-bottom: 30px; font-size: 24pt; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; }
@@ -780,14 +781,14 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
       </head>
       <body>
         <div class="meta-box">
-          <p><strong>椤圭洰鍚嶇О锛?/strong> ${project.name}</p>
-          <p><strong>瀵嗙骇绛夌骇锛?/strong> 闄㈠唴鏈哄瘑 (Confidential)</p>
-          <p><strong>鐗堟湰浠ｇ爜锛?/strong> V1.0.0 (姝ｅ紡鏂规)</p>
-          <p><strong>鐢熸垚鏃堕棿锛?/strong> 2026骞?鏈?/p>
+          <p><strong>项目名称：</strong> ${project.name}</p>
+          <p><strong>密级等级：</strong> 院内机密 (Confidential)</p>
+          <p><strong>版本代码：</strong> V1.0.0 (正式方案)</p>
+          <p><strong>生成时间：</strong> 2026年7月</p>
         </div>
         ${formattedHtml}
         <div class="footer">
-          姝ゆ柟妗堢敱 鍖荤枟鍋ュ悍鏁版嵁鏅鸿兘鍖垮悕鍖栧钩鍙?渚濈収鍥藉鍘绘爣璇嗗寲鎸囧崡瑙勮寖鍒嗘瀽鐢熸垚
+          此方案由 医疗健康数据智能匿名化平台 依照国家去标识化指南规范分析生成
         </div>
       </body>
       </html>
@@ -797,7 +798,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `鍖荤枟鏁版嵁鍖垮悕鍖栨柟妗坃${project.name.replace(/\s+/g, '_')}.doc`;
+    link.download = `医疗数据匿名化方案_${project.name.replace(/\s+/g, '_')}.doc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -838,20 +839,20 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
           <button 
             onClick={onBack}
             className="p-2 border-2 border-slate-900 hover:bg-slate-100 rounded text-slate-950 transition-colors cursor-pointer"
-            title="杩斿洖椤圭洰鍒楄〃"
+            title="返回项目列表"
             id="scheme_back_btn"
           >
             <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
           </button>
           <div>
             <div className="flex items-center space-x-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-              <span>椤圭洰绠＄悊</span>
+              <span>项目管理</span>
               <ChevronRight className="w-3 h-3" />
               <span className="truncate max-w-[200px]">{project.name}</span>
               <ChevronRight className="w-3 h-3" />
-              <span className="text-blue-600 font-bold">鏂规鐢熸垚</span>
+              <span className="text-blue-600 font-bold">方案生成</span>
             </div>
-            <h1 className="text-2xl font-black text-slate-900 mt-1 tracking-tight">鍖垮悕鍖栨柟妗堢敓鎴?/h1>
+            <h1 className="text-2xl font-black text-slate-900 mt-1 tracking-tight">匿名化方案生成</h1>
           </div>
         </div>
 
@@ -862,7 +863,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
             onClick={onBack}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded border border-slate-300 transition-all active:scale-98 cursor-pointer flex items-center justify-center"
           >
-            <span>鍙栨秷</span>
+            <span>取消</span>
           </button>
           <button
             type="button"
@@ -875,7 +876,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
             ) : (
               <Sparkles className="w-4 h-4 text-blue-100" />
             )}
-            <span>{isGenerating ? "鐢熸垚涓?.." : "淇濆瓨骞剁敓鎴?}</span>
+            <span>{isGenerating ? "生成中..." : "保存并生成"}</span>
           </button>
         </div>
       </div>
@@ -887,10 +888,11 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
             <div className="mb-5">
               <h2 className="text-base font-black text-slate-900 flex items-center space-x-2">
                 <span className="w-1.5 h-4 bg-blue-600 rounded-xs inline-block"></span>
-                <span>1. 鏍蜂緥鏁版嵁 <span className="text-red-500">*</span></span>
+                <span>1. 样例数据 <span className="text-red-500">*</span></span>
               </h2>
               <p className="text-xs text-slate-500 mt-1 font-medium">
-                鑷冲皯閫夋嫨涓€绫绘暟鎹笂浼狅紝鑻ュ瓨鍦ㄥ涓瓙鍒嗙被鐩存帴鎵归噺涓婁紶澶氫釜鏂囦欢锛屽皢鑷姩璇嗗埆鏂囦欢鍚嶄负瀛愬垎绫诲悕绉?              </p>
+                至少选择一类数据上传，若存在多个子分类直接批量上传多个文件，将自动识别文件名为子分类名称
+              </p>
             </div>
 
             <div className="space-y-6">
@@ -898,8 +900,8 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
               <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-200">
                 <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">锛?锛塁SV鏂囨湰鏁版嵁</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">浠呮敮鎸?csv 鏍煎紡锛屼粎鏀寔鍗晄heet锛岃嫢瀛樺湪澶氫釜瀛愬垎绫荤洿鎺ユ壒閲忎笂浼犲涓枃浠讹紝灏嗚嚜鍔ㄨ瘑鍒枃浠跺悕涓哄瓙鍒嗙被鍚嶇О</p>
+                    <h3 className="text-sm font-bold text-slate-900">（1）CSV文本数据</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">仅支持 csv 格式，仅支持单sheet，若存在多个子分类直接批量上传多个文件，将自动识别文件名为子分类名称</p>
                   </div>
                   <div className="flex bg-slate-100 p-0.5 rounded border border-slate-300 text-xs font-bold gap-0.5">
                     <button
@@ -907,7 +909,8 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                       onClick={() => setCsvEnabled(true)}
                       className={`px-3 py-1 rounded transition-all cursor-pointer ${csvEnabled ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
                     >
-                      鏈?                    </button>
+                      有
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
@@ -915,7 +918,8 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                       }}
                       className={`px-3 py-1 rounded transition-all cursor-pointer ${!csvEnabled ? 'bg-slate-300 text-slate-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
                     >
-                      鏃?                    </button>
+                      无
+                    </button>
                   </div>
                 </div>
 
@@ -927,23 +931,23 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                       className="flex flex-col items-center justify-center border-2 border-dashed border-blue-200 rounded-xl p-6 bg-white hover:bg-slate-50/50 transition-colors cursor-pointer group"
                     >
                       <Upload className="w-8 h-8 text-blue-500 mb-2 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-black text-slate-700">鐐瑰嚮鎵归噺閫夋嫨鎴栨嫋鎷藉涓?CSV 鏍煎紡鏍蜂緥鏁版嵁鏂囦欢</span>
+                      <span className="text-xs font-black text-slate-700">点击批量选择或拖拽多个 CSV 格式样例数据文件</span>
                     </div>
 
                     {/* Category List in Table Form */}
                     <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-3xs">
                       {csvCategories.length === 0 ? (
-                        <p className="text-xs text-slate-400 text-center py-6 bg-white font-medium">鏆傛棤CSV鏁版嵁鍒嗙被锛岃鍦ㄤ笂鏂逛笂浼犳枃浠?/p>
+                        <p className="text-xs text-slate-400 text-center py-6 bg-white font-medium">暂无CSV数据分类，请在上方上传文件</p>
                       ) : (
                         <table className="min-w-full table-fixed bg-white divide-y divide-slate-200 text-xs text-left">
                           <thead className="bg-slate-50 font-black text-slate-700 text-[11px] uppercase tracking-wider">
                             <tr>
-                              <th className="px-3 py-3 text-center border-b border-r border-slate-200 w-16">搴忓彿</th>
-                              <th className="px-3 py-3 border-b border-r border-slate-200 w-64">瀛愬垎绫诲悕绉?span className="text-red-500 font-bold ml-0.5">*</span></th>
-                              <th className="px-3 py-3 border-b border-r border-slate-200 w-60">鏂囦欢鍚?/th>
-                              <th className="px-3 py-3 border-b border-r border-slate-200 w-72">闀挎枃鏈瓧娈?/th>
-                              <th className="px-3 py-3 border-b border-r border-slate-200 w-80">鏁版嵁鏍囩</th>
-                              <th className="px-3 py-3 text-center border-b border-slate-200 w-24">鎿嶄綔</th>
+                              <th className="px-3 py-3 text-center border-b border-r border-slate-200 w-16">序号</th>
+                              <th className="px-3 py-3 border-b border-r border-slate-200 w-64">子分类名称<span className="text-red-500 font-bold ml-0.5">*</span></th>
+                              <th className="px-3 py-3 border-b border-r border-slate-200 w-60">文件名</th>
+                              <th className="px-3 py-3 border-b border-r border-slate-200 w-72">长文本字段</th>
+                              <th className="px-3 py-3 border-b border-r border-slate-200 w-80">数据标签</th>
+                              <th className="px-3 py-3 text-center border-b border-slate-200 w-24">操作</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-150">
@@ -951,7 +955,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                               const configs = cat.configs || [{ id: "temp", textField: "", splitFields: [] }];
                               const rowSpan = configs.length;
                               const hasFile = cat.files && cat.files.length > 0;
-                              const fileName = hasFile ? cat.files[0].name : "鏈笂浼犳枃浠?;
+                              const fileName = hasFile ? cat.files[0].name : "未上传文件";
 
                               return configs.map((config, configIdx) => {
                                 const isFirstRow = configIdx === 0;
@@ -977,13 +981,14 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                                               className={`p-1.5 border rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full ${
                                                 !cat.name.trim() ? "border-red-500 focus:ring-red-500 bg-red-50" : "border-slate-250 focus:border-blue-500 bg-slate-50/30"
                                               }`}
-                                              placeholder="淇敼瀛愬垎绫诲悕绉?
+                                              placeholder="修改子分类名称"
                                             />
                                           </div>
                                           {!cat.name.trim() && (
                                             <span className="text-[10px] text-red-500 font-semibold flex items-center gap-0.5">
                                               <AlertCircle className="w-3 h-3" />
-                                              蹇呭～椤?                                            </span>
+                                              必填项
+                                            </span>
                                           )}
                                         </div>
                                       </td>
@@ -1004,7 +1009,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                                             value={config.textField}
                                             options={cat.headers}
                                             onChange={(val) => updateConfigRow(cat.id, config.id, { textField: val })}
-                                            placeholder="璇烽€夋嫨闀挎枃鏈瓧娈?
+                                            placeholder="请选择长文本字段"
                                           />
                                         </div>
                                         
@@ -1012,7 +1017,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                                           type="button"
                                           onClick={() => addConfigRow(cat.id)}
                                           className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 border border-blue-200 hover:border-blue-300 rounded transition-colors cursor-pointer shrink-0 flex items-center justify-center w-6 h-6 font-bold text-sm"
-                                          title="澧炲姞琛?
+                                          title="增加行"
                                         >
                                           +
                                         </button>
@@ -1022,7 +1027,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                                             type="button"
                                             onClick={() => removeConfigRow(cat.id, config.id)}
                                             className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 border border-red-200 hover:border-red-300 rounded transition-colors cursor-pointer shrink-0 flex items-center justify-center w-6 h-6"
-                                            title="鍒犻櫎姝よ闀挎枃鏈?
+                                            title="删除此行长文本"
                                           >
                                             <Trash2 className="w-3.5 h-3.5" />
                                           </button>
@@ -1046,7 +1051,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                                           onClick={() => setCsvCategories(prev => prev.filter(c => c.id !== cat.id))}
                                           className="p-1 px-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded text-[11px] font-bold border border-red-100 transition-colors cursor-pointer"
                                         >
-                                          鍒犻櫎
+                                          删除
                                         </button>
                                       </td>
                                     )}
@@ -1066,8 +1071,8 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
               <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-200">
                 <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">锛?锛塂ICOM褰卞儚鏁版嵁</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">浠呮敮鎸丏ICOM鏍煎紡锛岃嫢瀛樺湪澶氫釜瀛愬垎绫荤洿鎺ユ壒閲忎笂浼犲涓枃浠讹紝灏嗚嚜鍔ㄨ瘑鍒枃浠跺悕涓哄瓙鍒嗙被鍚嶇О</p>
+                    <h3 className="text-sm font-bold text-slate-900">（2）DICOM影像数据</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">仅支持DICOM格式，若存在多个子分类直接批量上传多个文件，将自动识别文件名为子分类名称</p>
                   </div>
                   <div className="flex bg-slate-100 p-0.5 rounded border border-slate-300 text-xs font-bold gap-0.5">
                     <button
@@ -1075,7 +1080,8 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                       onClick={() => setDicomEnabled(true)}
                       className={`px-3 py-1 rounded transition-all cursor-pointer ${dicomEnabled ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
                     >
-                      鏈?                    </button>
+                      有
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
@@ -1083,7 +1089,8 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                       }}
                       className={`px-3 py-1 rounded transition-all cursor-pointer ${!dicomEnabled ? 'bg-slate-300 text-slate-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
                     >
-                      鏃?                    </button>
+                      无
+                    </button>
                   </div>
                 </div>
 
@@ -1095,27 +1102,27 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                       className="flex flex-col items-center justify-center border-2 border-dashed border-blue-200 rounded-xl p-6 bg-white hover:bg-slate-50/50 transition-colors cursor-pointer group"
                     >
                       <Upload className="w-8 h-8 text-blue-500 mb-2 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-black text-slate-700">鐐瑰嚮鎵归噺閫夋嫨鎴栨嫋鎷藉涓?.dcm 鏍煎紡鍖诲褰卞儚鏂囦欢</span>
+                      <span className="text-xs font-black text-slate-700">点击批量选择或拖拽多个 .dcm 格式医学影像文件</span>
                     </div>
 
                     {/* Category List in Table Form */}
                     <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-3xs">
                       {dicomCategories.length === 0 ? (
-                        <p className="text-xs text-slate-400 text-center py-6 bg-white font-medium">鏆傛棤DICOM褰卞儚鍒嗙被锛岃鍦ㄤ笂鏂逛笂浼犳枃浠?/p>
+                        <p className="text-xs text-slate-400 text-center py-6 bg-white font-medium">暂无DICOM影像分类，请在上方上传文件</p>
                       ) : (
                         <table className="min-w-full bg-white divide-y divide-slate-200 text-xs text-left">
                           <thead className="bg-slate-50 font-black text-slate-700 text-[11px] uppercase tracking-wider">
                             <tr>
-                              <th className="px-3 py-3 text-center border-b border-r border-slate-200 w-16">搴忓彿</th>
-                              <th className="px-3 py-3 border-b border-r border-slate-200 w-80">瀛愬垎绫诲悕绉?span className="text-red-500 font-bold ml-0.5">*</span></th>
-                              <th className="px-3 py-3 border-b border-r border-slate-200">鏂囦欢鍚?/th>
-                              <th className="px-3 py-3 text-center border-b border-slate-200 w-24">鎿嶄綔</th>
+                              <th className="px-3 py-3 text-center border-b border-r border-slate-200 w-16">序号</th>
+                              <th className="px-3 py-3 border-b border-r border-slate-200 w-80">子分类名称<span className="text-red-500 font-bold ml-0.5">*</span></th>
+                              <th className="px-3 py-3 border-b border-r border-slate-200">文件名</th>
+                              <th className="px-3 py-3 text-center border-b border-slate-200 w-24">操作</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-150">
                             {dicomCategories.map((cat, catIdx) => {
                               const hasFile = cat.files && cat.files.length > 0;
-                              const fileName = hasFile ? cat.files[0].name : "鏈笂浼犳枃浠?;
+                              const fileName = hasFile ? cat.files[0].name : "未上传文件";
                               return (
                                 <tr key={cat.id} className="hover:bg-slate-50/40 transition-colors">
                                   <td className="px-3 py-3.5 text-center align-middle border-r border-slate-200 bg-slate-50/20 font-semibold font-mono">
@@ -1135,13 +1142,14 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                                           className={`p-1.5 border rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full ${
                                             !cat.name.trim() ? "border-red-500 focus:ring-red-500 bg-red-50" : "border-slate-250 focus:border-blue-500 bg-slate-50/30"
                                           }`}
-                                          placeholder="淇敼瀛愬垎绫诲悕绉?
+                                          placeholder="修改子分类名称"
                                         />
                                       </div>
                                       {!cat.name.trim() && (
                                         <span className="text-[10px] text-red-500 font-semibold flex items-center gap-0.5">
                                           <AlertCircle className="w-3 h-3" />
-                                          蹇呭～椤?                                        </span>
+                                          必填项
+                                        </span>
                                       )}
                                     </div>
                                   </td>
@@ -1156,7 +1164,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                                       onClick={() => setDicomCategories(prev => prev.filter(c => c.id !== cat.id))}
                                       className="p-1 px-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded text-[11px] font-bold border border-red-100 transition-colors cursor-pointer"
                                     >
-                                      鍒犻櫎
+                                      删除
                                     </button>
                                   </td>
                                 </tr>
@@ -1174,8 +1182,8 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
               <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-200">
                 <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">锛?锛夊浘鐗囨暟鎹?/h3>
-                    <p className="text-xs text-slate-500 mt-0.5">鏀寔PNG/JPG/JPEG/BPM鏍煎紡锛岃嫢瀛樺湪澶氫釜瀛愬垎绫荤洿鎺ユ壒閲忎笂浼犲涓枃浠讹紝灏嗚嚜鍔ㄨ瘑鍒枃浠跺悕涓哄瓙鍒嗙被鍚嶇О</p>
+                    <h3 className="text-sm font-bold text-slate-900">（3）图片数据</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">支持PNG/JPG/JPEG/BPM格式，若存在多个子分类直接批量上传多个文件，将自动识别文件名为子分类名称</p>
                   </div>
                   <div className="flex bg-slate-100 p-0.5 rounded border border-slate-300 text-xs font-bold gap-0.5">
                     <button
@@ -1183,7 +1191,8 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                       onClick={() => setImageEnabled(true)}
                       className={`px-3 py-1 rounded transition-all cursor-pointer ${imageEnabled ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
                     >
-                      鏈?                    </button>
+                      有
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
@@ -1191,7 +1200,8 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                       }}
                       className={`px-3 py-1 rounded transition-all cursor-pointer ${!imageEnabled ? 'bg-slate-300 text-slate-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
                     >
-                      鏃?                    </button>
+                      无
+                    </button>
                   </div>
                 </div>
 
@@ -1203,27 +1213,27 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                       className="flex flex-col items-center justify-center border-2 border-dashed border-blue-200 rounded-xl p-6 bg-white hover:bg-slate-50/50 transition-colors cursor-pointer group"
                     >
                       <Upload className="w-8 h-8 text-blue-500 mb-2 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-black text-slate-700">鐐瑰嚮鎵归噺閫夋嫨鎴栨嫋鎷藉涓尰瀛﹀浘鐗?(.jpg/.jpeg/.png/.bmp) 鏂囦欢</span>
+                      <span className="text-xs font-black text-slate-700">点击批量选择或拖拽多个医学图片 (.jpg/.jpeg/.png/.bmp) 文件</span>
                     </div>
 
                     {/* Category List in Table Form */}
                     <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-3xs">
                       {imageCategories.length === 0 ? (
-                        <p className="text-xs text-slate-400 text-center py-6 bg-white font-medium">鏆傛棤鍥剧墖鏁版嵁鍒嗙被锛岃鍦ㄤ笂鏂逛笂浼犳枃浠?/p>
+                        <p className="text-xs text-slate-400 text-center py-6 bg-white font-medium">暂无图片数据分类，请在上方上传文件</p>
                       ) : (
                         <table className="min-w-full bg-white divide-y divide-slate-200 text-xs text-left">
                           <thead className="bg-slate-50 font-black text-slate-700 text-[11px] uppercase tracking-wider">
                             <tr>
-                              <th className="px-3 py-3 text-center border-b border-r border-slate-200 w-16">搴忓彿</th>
-                              <th className="px-3 py-3 border-b border-r border-slate-200 w-80">瀛愬垎绫诲悕绉?span className="text-red-500 font-bold ml-0.5">*</span></th>
-                              <th className="px-3 py-3 border-b border-r border-slate-200">鏂囦欢鍚?/th>
-                              <th className="px-3 py-3 text-center border-b border-slate-200 w-24">鎿嶄綔</th>
+                              <th className="px-3 py-3 text-center border-b border-r border-slate-200 w-16">序号</th>
+                              <th className="px-3 py-3 border-b border-r border-slate-200 w-80">子分类名称<span className="text-red-500 font-bold ml-0.5">*</span></th>
+                              <th className="px-3 py-3 border-b border-r border-slate-200">文件名</th>
+                              <th className="px-3 py-3 text-center border-b border-slate-200 w-24">操作</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-150">
                             {imageCategories.map((cat, catIdx) => {
                               const hasFile = cat.files && cat.files.length > 0;
-                              const fileName = hasFile ? cat.files[0].name : "鏈笂浼犳枃浠?;
+                              const fileName = hasFile ? cat.files[0].name : "未上传文件";
                               return (
                                 <tr key={cat.id} className="hover:bg-slate-50/40 transition-colors">
                                   <td className="px-3 py-3.5 text-center align-middle border-r border-slate-200 bg-slate-50/20 font-semibold font-mono">
@@ -1243,13 +1253,14 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                                           className={`p-1.5 border rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full ${
                                             !cat.name.trim() ? "border-red-500 focus:ring-red-500 bg-red-50" : "border-slate-250 focus:border-blue-500 bg-slate-50/30"
                                           }`}
-                                          placeholder="淇敼瀛愬垎绫诲悕绉?
+                                          placeholder="修改子分类名称"
                                         />
                                       </div>
                                       {!cat.name.trim() && (
                                         <span className="text-[10px] text-red-500 font-semibold flex items-center gap-0.5">
                                           <AlertCircle className="w-3 h-3" />
-                                          蹇呭～椤?                                        </span>
+                                          必填项
+                                        </span>
                                       )}
                                     </div>
                                   </td>
@@ -1264,7 +1275,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                                       onClick={() => setImageCategories(prev => prev.filter(c => c.id !== cat.id))}
                                       className="p-1 px-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded text-[11px] font-bold border border-red-100 transition-colors cursor-pointer"
                                     >
-                                      鍒犻櫎
+                                      删除
                                     </button>
                                   </td>
                                 </tr>
@@ -1284,7 +1295,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
           <div className="bg-white rounded-xl shadow-xs border-2 border-slate-200 p-6" id="section_data_scale">
             <h2 className="text-base font-black text-slate-900 flex items-center space-x-2 mb-4">
               <span className="w-1.5 h-4 bg-blue-600 rounded-xs inline-block"></span>
-              <span>2. 鏁版嵁瑙勬ā <span className="text-red-500">*</span></span>
+              <span>2. 数据规模 <span className="text-red-500">*</span></span>
             </h2>
             
             <input
@@ -1292,7 +1303,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
               required
               value={dataScale}
               onChange={(e) => setDataScale(e.target.value)}
-              placeholder="璇疯緭鍏?
+              placeholder="请输入"
               className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-slate-800"
               id="data_scale_input"
             />
@@ -1302,13 +1313,13 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
           <div className="bg-white rounded-xl shadow-xs border-2 border-slate-200 p-6" id="section_usage_scenario">
             <h2 className="text-base font-black text-slate-900 flex items-center space-x-2 mb-4">
               <span className="w-1.5 h-4 bg-blue-600 rounded-xs inline-block"></span>
-              <span>3. 浣跨敤鍦烘櫙璇存槑 <span className="text-red-500">*</span></span>
+              <span>3. 使用场景说明 <span className="text-red-500">*</span></span>
             </h2>
             
             <textarea
               value={usageScenario}
               onChange={(e) => setUsageScenario(e.target.value)}
-              placeholder="渚嬪锛歺x鍖婚櫌浣滀负涓€鎵€浠x涓洪噸鐐瑰绉戠殑涓夌骇鐢茬瓑缁煎悎鍖婚櫌锛屽凡绯荤粺鎬хН绱簡瑙勬ā搴炲ぇ鐨剎x鏁版嵁闆嗐€傚尰闄㈡嫙鏍规嵁xx鍏徃鐨勯渶姹傦紝鍦ㄥ尶鍚嶅寲澶勭悊鍚庯紝鍚憍x鍏徃杩涜鍚堣娴侀€氾紝鐢ㄤ簬鍖荤枟澶фā鍨嬭兘鍔涜瘎浼颁笌浼樺寲銆?
+              placeholder="例如：xx医院作为一所以xx为重点学科的三级甲等综合医院，已系统性积累了规模庞大的xx数据集。医院拟根据xx公司的需求，在匿名化处理后，向xx公司进行合规流通，用于医疗大模型能力评估与优化。"
               className="w-full h-32 p-3 bg-slate-50 border-2 border-slate-200 rounded text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all resize-none text-slate-800"
               id="usage_scenario_textarea"
             />
@@ -1319,16 +1330,16 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
             <div className="border-b-2 border-slate-100 pb-4 mb-5">
               <h2 className="text-base font-black text-slate-900 flex items-center space-x-2">
                 <span className="w-1.5 h-4 bg-blue-600 rounded-xs inline-block"></span>
-                <span>4. 鍖垮悕鍖栬瘎浠锋柟寮?/span>
+                <span>4. 匿名化评价方式</span>
               </h2>
-              <p className="text-xs text-slate-500 mt-1 font-medium">閫夋嫨鍏蜂綋鐨勮瘎浠锋柟寮忥紝骞堕厤缃浉搴旂殑鍙傛暟</p>
+              <p className="text-xs text-slate-500 mt-1 font-medium">选择具体的评价方式，并配置相应的参数</p>
             </div>
 
             <div className="space-y-6">
               {/* (1) Evaluation Method */}
               <div className="border-b border-slate-100 pb-5">
                 <label className="block text-sm font-bold text-slate-900 tracking-tight mb-2">
-                  锛?锛夎瘎浠锋柟寮?span className="text-rose-600 ml-1 font-black">*</span>
+                  （1）评价方式<span className="text-rose-600 ml-1 font-black">*</span>
                 </label>
                 <select
                   value={evaluationMethod}
@@ -1336,37 +1347,38 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                   disabled
                   className="w-full p-2.5 bg-slate-100 border-2 border-slate-200 rounded text-xs font-bold text-slate-500 focus:outline-none cursor-not-allowed"
                 >
-                  <option value="K鍖垮悕">k-鍖垮悕鍊?/option>
+                  <option value="K匿名">k-匿名值</option>
                 </select>
                 <p className="text-xs text-slate-400 mt-2 leading-relaxed font-medium">
-                  鍏蜂綋璁＄畻鍏紡锛欰 = K 脳 S 脳 E 鍏朵腑锛欰鈥斺€斿尶鍚嶅寲绋嬪害锛岃〃绀烘暟鎹泦鐨勫尶鍚嶅寲绋嬪害銆傚叾鍊煎ぇ浜庣瓑浜?1 鏃讹紝璁や负婊¤冻鍖垮悕鍖栬姹傦紱K鈥斺€旀暟鎹泦 K 鍖垮悕鍊硷紝琛ㄧず鏁版嵁闆嗙粡杩囧尶鍚嶅寲澶勭悊鍚庯紝鍏峰鐩稿悓鐨勫噯鏍囪瘑绗﹀瓧娈电粍鍚堢殑璁板綍鐨勬潯鏁扮殑鏈€灏忓€硷紱S鈥斺€斿満鏅郴鏁帮紝琛ㄧず鏁版嵁鍖垮悕鍖栧悗浣跨敤鍦烘櫙鐨勫畨鍏ㄧ郴鏁帮紝濡傞鍦板叕寮€鍏变韩銆佸彈鎺у叕寮€鍏变韩銆佸畬鍏ㄥ叕寮€鍏变韩绛夛紱E鈥斺€旂幆澧冪郴鏁帮紝琛ㄧず鏁版嵁娴侀€氭椂锛屾暟鎹祦閫氱幆澧冪殑鎶€鏈繚闅滆兘鍔涘拰绠＄悊淇濋殰鑳藉姏銆?                </p>
+                  具体计算公式：A = K × S × E 其中：A——匿名化程度，表示数据集的匿名化程度。其值大于等于 1 时，认为满足匿名化要求；K——数据集 K 匿名值，表示数据集经过匿名化处理后，具备相同的准标识符字段组合的记录的条数的最小值；S——场景系数，表示数据匿名化后使用场景的安全系数，如领地公开共享、受控公开共享、完全公开共享等；E——环境系数，表示数据流通时，数据流通环境的技术保障能力和管理保障能力。
+                </p>
               </div>
 
               {/* (2) Scenario Coefficient */}
               <div className="border-b border-slate-100 pb-5">
                 <label className="block text-sm font-bold text-slate-900 tracking-tight mb-2">
-                  锛?锛夊満鏅郴鏁?span className="text-rose-600 ml-1 font-black">*</span>
+                  （2）场景系数<span className="text-rose-600 ml-1 font-black">*</span>
                 </label>
                 <select
                   value={scenarioType}
                   onChange={(e) => setScenarioType(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all cursor-pointer"
                 >
-                  <option value="">璇烽€夋嫨</option>
-                  <option value="缁勭粐鍐呴儴鍚屼竴涓簨涓氱兢鐨勬暟鎹祦閫?>缁勭粐鍐呴儴鍚屼竴涓簨涓氱兢鐨勬暟鎹祦閫?/option>
-                  <option value="缁勭粐鍐呴儴璺ㄤ簨涓氱兢鐨勬暟鎹祦閫?>缁勭粐鍐呴儴璺ㄤ簨涓氱兢鐨勬暟鎹祦閫?/option>
-                  <option value="缁勭粐澶栭儴涓ゆ柟鐨勬暟鎹祦閫?>缁勭粐澶栭儴涓ゆ柟鐨勬暟鎹祦閫?/option>
-                  <option value="缁勭粐澶栭儴澶氭柟鐨勬暟鎹祦閫?>缁勭粐澶栭儴澶氭柟鐨勬暟鎹祦閫?/option>
-                  <option value="瀵瑰鍏紑">瀵瑰鍏紑</option>
+                  <option value="">请选择</option>
+                  <option value="组织内部同一个事业群的数据流通">组织内部同一个事业群的数据流通</option>
+                  <option value="组织内部跨事业群的数据流通">组织内部跨事业群的数据流通</option>
+                  <option value="组织外部两方的数据流通">组织外部两方的数据流通</option>
+                  <option value="组织外部多方的数据流通">组织外部多方的数据流通</option>
+                  <option value="对外公开">对外公开</option>
                 </select>
                 <div className="mt-2 text-xs font-bold text-slate-600 flex items-center space-x-1">
-                  <span>寤鸿鐨勫満鏅郴鏁?S锛?/span>
+                  <span>建议的场景系数 S：</span>
                   <span className="text-blue-600 font-black">
-                    {scenarioType === "缁勭粐鍐呴儴鍚屼竴涓簨涓氱兢鐨勬暟鎹祦閫? && "1/3"}
-                    {scenarioType === "缁勭粐鍐呴儴璺ㄤ簨涓氱兢鐨勬暟鎹祦閫? && "1/4"}
-                    {scenarioType === "缁勭粐澶栭儴涓ゆ柟鐨勬暟鎹祦閫? && "1/5"}
-                    {scenarioType === "缁勭粐澶栭儴澶氭柟鐨勬暟鎹祦閫? && "1/6"}
-                    {scenarioType === "瀵瑰鍏紑" && "1/20"}
+                    {scenarioType === "组织内部同一个事业群的数据流通" && "1/3"}
+                    {scenarioType === "组织内部跨事业群的数据流通" && "1/4"}
+                    {scenarioType === "组织外部两方的数据流通" && "1/5"}
+                    {scenarioType === "组织外部多方的数据流通" && "1/6"}
+                    {scenarioType === "对外公开" && "1/20"}
                     {!scenarioType && "-"}
                   </span>
                 </div>
@@ -1375,7 +1387,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
               {/* (3) Environmental Coefficient - Technical Guard */}
               <div className="border-b border-slate-100 pb-5">
                 <label className="block text-sm font-bold text-slate-900 tracking-tight mb-2">
-                  锛?锛夌幆澧冪郴鏁?鎶€鏈繚闅滆兘鍔?span className="text-rose-600 ml-1 font-black">*</span>
+                  （3）环境系数-技术保障能力<span className="text-rose-600 ml-1 font-black">*</span>
                 </label>
                 <div className="space-y-5 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                   {envItems.map((item) => {
@@ -1396,25 +1408,26 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                             <div className="flex bg-slate-100 p-0.5 rounded border border-slate-200 text-[11px] font-bold">
                               <button
                                 type="button"
-                                onClick={() => handleStatusChange(item.id, 'env', '婊¤冻')}
+                                onClick={() => handleStatusChange(item.id, 'env', '满足')}
                                 className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
-                                  item.status === '婊¤冻' 
+                                  item.status === '满足' 
                                     ? 'bg-emerald-600 text-white shadow-xs' 
                                     : 'text-slate-500 hover:text-slate-800'
                                 }`}
                               >
-                                婊¤冻
+                                满足
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleStatusChange(item.id, 'env', '寰呭畬鍠?)}
+                                onClick={() => handleStatusChange(item.id, 'env', '待完善')}
                                 className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
-                                  item.status === '寰呭畬鍠? 
+                                  item.status === '待完善' 
                                     ? 'bg-amber-500 text-white shadow-xs' 
                                     : 'text-slate-500 hover:text-slate-800'
                                 }`}
                               >
-                                寰呭畬鍠?                              </button>
+                                待完善
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -1427,10 +1440,10 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
               {/* (4) Environmental Coefficient - Management Guard */}
               <div className="border-b border-slate-100 pb-5">
                 <label className="block text-sm font-bold text-slate-900 tracking-tight mb-2">
-                  锛?锛夌幆澧冪郴鏁?绠＄悊淇濋殰鑳藉姏<span className="text-rose-600 ml-1 font-black">*</span>
+                  （4）环境系数-管理保障能力<span className="text-rose-600 ml-1 font-black">*</span>
                 </label>
                 <div className="space-y-6 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                  {["鏁版嵁鎸佹湁鏂?, "鏁版嵁浣跨敤鏂?, "鏁版嵁杩愯惀鏂?].map((categoryName) => {
+                  {["数据持有方", "数据使用方", "数据运营方"].map((categoryName) => {
                     const categoryItems = mgmtItems.filter(item => item.category === categoryName);
                     if (categoryItems.length === 0) return null;
                     return (
@@ -1460,25 +1473,26 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                                     <div className="flex bg-slate-100 p-0.5 rounded border border-slate-200 text-[11px] font-bold">
                                       <button
                                         type="button"
-                                        onClick={() => handleStatusChange(item.id, 'mgmt', '婊¤冻')}
+                                        onClick={() => handleStatusChange(item.id, 'mgmt', '满足')}
                                         className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
-                                          item.status === '婊¤冻' 
+                                          item.status === '满足' 
                                             ? 'bg-emerald-600 text-white shadow-xs' 
                                             : 'text-slate-500 hover:text-slate-800'
                                         }`}
                                       >
-                                        婊¤冻
+                                        满足
                                       </button>
                                       <button
                                         type="button"
-                                        onClick={() => handleStatusChange(item.id, 'mgmt', '寰呭畬鍠?)}
+                                        onClick={() => handleStatusChange(item.id, 'mgmt', '待完善')}
                                         className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
-                                          item.status === '寰呭畬鍠? 
+                                          item.status === '待完善' 
                                             ? 'bg-amber-500 text-white shadow-xs' 
                                             : 'text-slate-500 hover:text-slate-800'
                                         }`}
                                       >
-                                        寰呭畬鍠?                                      </button>
+                                        待完善
+                                      </button>
                                     </div>
                                   </div>
                                 </div>
@@ -1495,18 +1509,19 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
               {/* (5) Minimum K Value */}
               <div>
                 <label className="block text-sm font-bold text-slate-900 tracking-tight mb-2">
-                  锛?锛夋渶浣嶬鍊?                </label>
+                  （5）最低K值
+                </label>
                 <div className="flex items-center space-x-3 bg-slate-50 border-2 border-slate-200 rounded-lg p-4">
                   <div className="flex-1">
-                    <p className="text-xs font-bold text-slate-700">鏍规嵁涓婅堪濉啓鐨勫満鏅郴鏁板拰鐜绯绘暟锛屼负婊¤冻鍖垮悕鍖栬姹傦紝K-鍖垮悕鍊煎簲涓嶄綆浜庯細</p>
+                    <p className="text-xs font-bold text-slate-700">根据上述填写的场景系数和环境系数，为满足匿名化要求，K-匿名值应不低于：</p>
                   </div>
                   <div className="w-16 h-16 bg-blue-50 border-2 border-blue-200 rounded-xl flex items-center justify-center shrink-0">
                     <span className="text-2xl font-black text-blue-600">
-                      {scenarioType === "缁勭粐鍐呴儴鍚屼竴涓簨涓氱兢鐨勬暟鎹祦閫? && "3"}
-                      {scenarioType === "缁勭粐鍐呴儴璺ㄤ簨涓氱兢鐨勬暟鎹祦閫? && "4"}
-                      {scenarioType === "缁勭粐澶栭儴涓ゆ柟鐨勬暟鎹祦閫? && "5"}
-                      {scenarioType === "缁勭粐澶栭儴澶氭柟鐨勬暟鎹祦閫? && "6"}
-                      {scenarioType === "瀵瑰鍏紑" && "20"}
+                      {scenarioType === "组织内部同一个事业群的数据流通" && "3"}
+                      {scenarioType === "组织内部跨事业群的数据流通" && "4"}
+                      {scenarioType === "组织外部两方的数据流通" && "5"}
+                      {scenarioType === "组织外部多方的数据流通" && "6"}
+                      {scenarioType === "对外公开" && "20"}
                       {!scenarioType && "-"}
                     </span>
                   </div>
@@ -1529,7 +1544,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                 <Sparkles className="w-6 h-6 text-blue-500 animate-pulse" />
               </div>
             </div>
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">鍖垮悕鍖栨柟妗堢敓鎴愪腑</h2>
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">匿名化方案生成中</h2>
           </div>
         </div>
       )}
@@ -1541,13 +1556,14 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
             <div className="w-16 h-16 bg-emerald-50 rounded-full border-2 border-emerald-500 flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-8 h-8 text-emerald-600 stroke-[2.5]" />
             </div>
-            <h2 className="text-2xl font-black text-slate-950 tracking-tight">馃帀 鍖荤枟鏁版嵁鍖垮悕鍖栨柟妗堣閰嶆垚鍔燂紒</h2>
+            <h2 className="text-2xl font-black text-slate-950 tracking-tight">🎉 医疗数据匿名化方案装配成功！</h2>
             <p className="text-xs text-slate-600 mt-3 leading-relaxed max-w-md mx-auto">
-              绯荤粺宸插熀浜庢垜鍥?<strong>GB/T 39725 鍖荤枟瀹夊叏鎸囧崡</strong> 鍜?<strong>GB/T 37964 鍘绘爣璇嗗寲鎸囧崡</strong> 瑁呴厤瀹屾垚浜嗛拡瀵归」鐩?<strong className="text-blue-600 font-extrabold">銆妠project.name}銆?/strong> 鐨勫悎瑙勪繚鎶ゆ柟妗堟枃妗ｏ紝骞跺凡鍚屾瀛樺叆椤圭洰璧勪骇涓€?            </p>
+              系统已基于我国 <strong>GB/T 39725 医疗安全指南</strong> 和 <strong>GB/T 37964 去标识化指南</strong> 装配完成了针对项目 <strong className="text-blue-600 font-extrabold">《{project.name}》</strong> 的合规保护方案文档，并已同步存入项目资产中。
+            </p>
             
             {generationError && (
               <div className="mt-4 bg-amber-50 border-2 border-amber-300 text-amber-900 rounded-lg p-4 text-left text-xs leading-relaxed">
-                <span className="font-black text-amber-950 uppercase block mb-1">鈿狅笍 琛ュ伩鎬у悎瑙勮鏄庯細</span>
+                <span className="font-black text-amber-950 uppercase block mb-1">⚠️ 补偿性合规说明：</span>
                 <p className="text-amber-800 font-bold">{generationError}</p>
               </div>
             )}
@@ -1557,7 +1573,7 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                 onClick={onBack}
                 className="py-3 px-4 border-2 border-slate-300 hover:border-slate-800 rounded font-black text-xs text-slate-700 hover:text-slate-950 uppercase tracking-wider transition-all cursor-pointer"
               >
-                杩斿洖椤圭洰澶у巺
+                返回项目大厅
               </button>
               <button
                 onClick={() => {
@@ -1566,7 +1582,8 @@ export default function AnonymizationScheme({ project, onBack, onSchemeGenerated
                 }}
                 className="py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-200 transition-all cursor-pointer animate-none"
               >
-                鏌ョ湅鍖垮悕鍖栨柟妗?              </button>
+                查看匿名化方案
+              </button>
             </div>
           </div>
         </div>

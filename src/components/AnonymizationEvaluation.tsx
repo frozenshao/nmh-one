@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Project, UploadState, FieldConfig } from "../types";
-import { apiFetch } from "../lib/apiFetch";
 import { 
   ArrowLeft, Play, BarChart2, X, Loader2, Sparkles, Plus, Search, 
   Server, Clock, AlertTriangle, CheckCircle2, Power, Eye, Settings2, 
@@ -19,8 +18,8 @@ interface AnonymizationEvaluationProps {
 interface TaskItem {
   id: string;
   name: string;
-  modality: 'CSV 缁撴瀯鍖栨枃鏈暟鎹? | 'DICOM 褰卞儚鏁版嵁';
-  status: '绛夊緟鎵ц' | '鎵ц涓? | '宸插畬鎴? | '寮傚父涓柇' | '鎵嬪姩缁撴潫';
+  modality: 'CSV 结构化文本数据' | 'DICOM 影像数据';
+  status: '等待执行' | '执行中' | '已完成' | '异常中断' | '手动结束';
   servers: string[];
   startTime: string;
   endTime: string;
@@ -33,38 +32,38 @@ interface TaskItem {
 }
 
 const SERVERS = [
-  "鏈嶅姟鍣?A (鐟為噾鍖婚櫌 HIS 鏁版嵁搴?",
-  "鏈嶅姟鍣?B (鐟為噾鍖婚櫌 PACS 褰卞儚瀛樺偍)",
-  "鏈嶅姟鍣?C (寮犳睙鍘绘爣璇嗙鐮斾腑蹇冧簯)"
+  "服务器 A (瑞金医院 HIS 数据库)",
+  "服务器 B (瑞金医院 PACS 影像存储)",
+  "服务器 C (张江去标识科研中心云)"
 ];
 
 export default function AnonymizationEvaluation({ project, onBack, uploadState, onUpdateProject }: AnonymizationEvaluationProps) {
   const getFieldStatsData = (fieldName: string, fieldNameZh: string) => {
-    if (fieldName === "age" || fieldNameZh === "灏辫瘖骞撮緞") {
+    if (fieldName === "age" || fieldNameZh === "就诊年龄") {
       return {
         fieldName: "age",
-        name: "灏辫瘖骞撮緞",
+        name: "就诊年龄",
         total: 5612,
         data: [
-          { value: "60-64宀?, count: 800, freq: "14.3%" },
-          { value: "65-69宀?, count: 750, freq: "13.4%" },
-          { value: "70-74宀?, count: 700, freq: "12.5%" },
-          { value: "55-59宀?, count: 650, freq: "11.6%" },
-          { value: "50-54宀?, count: 550, freq: "9.8%" },
-          { value: "75-79宀?, count: 500, freq: "8.9%" },
-          { value: "45-49宀?, count: 450, freq: "8.0%" },
-          { value: "40-44宀?, count: 350, freq: "6.2%" },
-          { value: "80-84宀?, count: 250, freq: "4.4%" },
-          { value: "35-39宀?, count: 200, freq: "3.6%" },
-          { value: "30-34宀?, count: 150, freq: "2.7%" },
-          { value: "25-29宀?, count: 100, freq: "1.8%" },
-          { value: "85-89宀?, count: 50, freq: "0.9%" },
-          { value: "20-24宀?, count: 40, freq: "0.7%" },
-          { value: "90宀佸強浠ヤ笂", count: 30, freq: "0.5%" },
-          { value: "15-19宀?, count: 20, freq: "0.3%" },
-          { value: "10-14宀?, count: 12, freq: "0.2%" },
-          { value: "5-9宀?, count: 6, freq: "0.1%" },
-          { value: "0-4宀?, count: 4, freq: "0.1%" }
+          { value: "60-64岁", count: 800, freq: "14.3%" },
+          { value: "65-69岁", count: 750, freq: "13.4%" },
+          { value: "70-74岁", count: 700, freq: "12.5%" },
+          { value: "55-59岁", count: 650, freq: "11.6%" },
+          { value: "50-54岁", count: 550, freq: "9.8%" },
+          { value: "75-79岁", count: 500, freq: "8.9%" },
+          { value: "45-49岁", count: 450, freq: "8.0%" },
+          { value: "40-44岁", count: 350, freq: "6.2%" },
+          { value: "80-84岁", count: 250, freq: "4.4%" },
+          { value: "35-39岁", count: 200, freq: "3.6%" },
+          { value: "30-34岁", count: 150, freq: "2.7%" },
+          { value: "25-29岁", count: 100, freq: "1.8%" },
+          { value: "85-89岁", count: 50, freq: "0.9%" },
+          { value: "20-24岁", count: 40, freq: "0.7%" },
+          { value: "90岁及以上", count: 30, freq: "0.5%" },
+          { value: "15-19岁", count: 20, freq: "0.3%" },
+          { value: "10-14岁", count: 12, freq: "0.2%" },
+          { value: "5-9岁", count: 6, freq: "0.1%" },
+          { value: "0-4岁", count: 4, freq: "0.1%" }
         ]
       };
     } else {
@@ -73,21 +72,21 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
         name: fieldNameZh,
         total: 1390,
         data: [
-          { value: "鐗瑰緛鍊?A", count: 208, freq: "15.0%" },
-          { value: "鐗瑰緛鍊?B", count: 188, freq: "13.5%" },
-          { value: "鐗瑰緛鍊?C", count: 177, freq: "12.7%" },
-          { value: "鐗瑰緛鍊?D", count: 167, freq: "12.0%" },
-          { value: "鐗瑰緛鍊?E", count: 156, freq: "11.2%" },
-          { value: "鐗瑰緛鍊?F", count: 145, fontNormal: true, freq: "10.4%" },
-          { value: "鐗瑰緛鍊?G", count: 125, freq: "9.0%" },
-          { value: "鐗瑰緛鍊?H", count: 104, freq: "7.5%" },
-          { value: "鐗瑰緛鍊?I", count: 63, freq: "4.5%" },
-          { value: "鐗瑰緛鍊?J", count: 31, freq: "2.2%" },
-          { value: "鐗瑰緛鍊?K", count: 11, freq: "0.8%" },
-          { value: "鐗瑰緛鍊?L", count: 7, freq: "0.5%" },
-          { value: "鐗瑰緛鍊?M", count: 4, freq: "0.3%" },
-          { value: "鐗瑰緛鍊?N", count: 3, freq: "0.2%" },
-          { value: "鐗瑰緛鍊?O", count: 3, freq: "0.2%" }
+          { value: "特征值 A", count: 208, freq: "15.0%" },
+          { value: "特征值 B", count: 188, freq: "13.5%" },
+          { value: "特征值 C", count: 177, freq: "12.7%" },
+          { value: "特征值 D", count: 167, freq: "12.0%" },
+          { value: "特征值 E", count: 156, freq: "11.2%" },
+          { value: "特征值 F", count: 145, fontNormal: true, freq: "10.4%" },
+          { value: "特征值 G", count: 125, freq: "9.0%" },
+          { value: "特征值 H", count: 104, freq: "7.5%" },
+          { value: "特征值 I", count: 63, freq: "4.5%" },
+          { value: "特征值 J", count: 31, freq: "2.2%" },
+          { value: "特征值 K", count: 11, freq: "0.8%" },
+          { value: "特征值 L", count: 7, freq: "0.5%" },
+          { value: "特征值 M", count: 4, freq: "0.3%" },
+          { value: "特征值 N", count: 3, freq: "0.2%" },
+          { value: "特征值 O", count: 3, freq: "0.2%" }
         ]
       };
     }
@@ -98,9 +97,9 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
     {
       id: "TASK-1002",
       name: "20260715-001",
-      modality: "DICOM 褰卞儚鏁版嵁",
-      status: "鎵ц涓?,
-      servers: ["鏈嶅姟鍣?A (鐟為噾鍖婚櫌 HIS 鏁版嵁搴?", "鏈嶅姟鍣?B (鐟為噾鍖婚櫌 PACS 褰卞儚瀛樺偍)"],
+      modality: "DICOM 影像数据",
+      status: "执行中",
+      servers: ["服务器 A (瑞金医院 HIS 数据库)", "服务器 B (瑞金医院 PACS 影像存储)"],
       startTime: "2026-07-15 03:00:00",
       endTime: "-",
       createdAt: "2026-07-15 02:50:00",
@@ -113,9 +112,9 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
     {
       id: "TASK-1003",
       name: "20260714-004",
-      modality: "CSV 缁撴瀯鍖栨枃鏈暟鎹?,
-      status: "鍚姩涓?,
-      servers: ["鏈嶅姟鍣?C (寮犳睙鍘绘爣璇嗙鐮斾腑蹇冧簯)"],
+      modality: "CSV 结构化文本数据",
+      status: "启动中",
+      servers: ["服务器 C (张江去标识科研中心云)"],
       startTime: "2026-07-14 18:30:00",
       endTime: "-",
       createdAt: "2026-07-14 18:00:00",
@@ -127,9 +126,9 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
     {
       id: "TASK-1004",
       name: "20260714-003",
-      modality: "DICOM 褰卞儚鏁版嵁",
-      status: "寮傚父涓柇",
-      servers: ["鏈嶅姟鍣?B (鐟為噾鍖婚櫌 PACS 褰卞儚瀛樺偍)"],
+      modality: "DICOM 影像数据",
+      status: "异常中断",
+      servers: ["服务器 B (瑞金医院 PACS 影像存储)"],
       startTime: "2026-07-14 16:30:00",
       endTime: "2026-07-14 16:31:12",
       createdAt: "2026-07-14 16:00:00",
@@ -141,9 +140,9 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
     {
       id: "TASK-1005",
       name: "20260714-002",
-      modality: "CSV 缁撴瀯鍖栨枃鏈暟鎹?,
-      status: "鎵嬪姩缁撴潫",
-      servers: ["鏈嶅姟鍣?A (鐟為噾鍖婚櫌 HIS 鏁版嵁搴?"],
+      modality: "CSV 结构化文本数据",
+      status: "手动结束",
+      servers: ["服务器 A (瑞金医院 HIS 数据库)"],
       startTime: "2026-07-14 11:15:00",
       endTime: "2026-07-14 11:15:30",
       createdAt: "2026-07-14 11:10:00",
@@ -155,9 +154,9 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
     {
       id: "TASK-1001",
       name: "20260714-001",
-      modality: "CSV 缁撴瀯鍖栨枃鏈暟鎹?,
-      status: "宸插畬鎴?,
-      servers: ["鏈嶅姟鍣?A (鐟為噾鍖婚櫌 HIS 鏁版嵁搴?"],
+      modality: "CSV 结构化文本数据",
+      status: "已完成",
+      servers: ["服务器 A (瑞金医院 HIS 数据库)"],
       startTime: "2026-07-14 10:00:00",
       endTime: "2026-07-14 10:50:00",
       createdAt: "2026-07-14 09:55:00",
@@ -169,7 +168,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
   ]);
 
   // UI state
-  const [statusFilter, setStatusFilter] = useState("鍏ㄩ儴");
+  const [statusFilter, setStatusFilter] = useState("全部");
   const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
   const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<TaskItem | null>(null);
   const [policyChangedAlertOpen, setPolicyChangedAlertOpen] = useState(false);
@@ -194,7 +193,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
     if (task.id === 'TASK-1003') return '-';
     if (task.id === 'TASK-1004') return '1min';
     if (task.id === 'TASK-1005') return '30min';
-    if (task.status === '绛夊緟鎵ц') return '-';
+    if (task.status === '等待执行') return '-';
     return '1min';
   };
 
@@ -249,7 +248,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
       if (t.id === taskId) {
         return {
           ...t,
-          status: '鎵ц涓?,
+          status: '执行中',
           progress: 0,
           success: 0,
           failure: 0,
@@ -272,75 +271,75 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
   // States for Task Details Table
   const [detailRows, setDetailRows] = useState([
     {
-      modality: "CSV鏂囨湰鏁版嵁",
-      category: "浣忛櫌淇℃伅",
+      modality: "CSV文本数据",
+      category: "住院信息",
       total: "5,612",
       success: "5,612",
       failure: "0",
-      status: "宸插畬鎴? as const,
+      status: "已完成" as const,
       duration: "1h5m",
-      dataSource: "浣忛櫌淇℃伅鏁版嵁缁堢増"
+      dataSource: "住院信息数据终版"
     },
     {
-      modality: "CSV鏂囨湰鏁版嵁",
-      category: "妫€鏌ヤ俊鎭?,
+      modality: "CSV文本数据",
+      category: "检查信息",
       total: "1,390",
       success: "1,370",
       failure: "20",
-      status: "宸插畬鎴? as const,
+      status: "已完成" as const,
       duration: "46min",
-      dataSource: "妫€鏌ヤ俊鎭暟鎹粓鐗?
+      dataSource: "检查信息数据终版"
     },
     {
-      modality: "CSV鏂囨湰鏁版嵁",
-      category: "妫€楠屼俊鎭?,
+      modality: "CSV文本数据",
+      category: "检验信息",
       total: "2,432",
       success: "2,432",
       failure: "0",
-      status: "寮傚父涓柇" as const,
+      status: "异常中断" as const,
       duration: "15m",
-      dataSource: "妫€楠屼俊鎭暟鎹粓鐗?
+      dataSource: "检验信息数据终版"
     },
     {
-      modality: "DICOM褰卞儚鏁版嵁",
+      modality: "DICOM影像数据",
       category: "-",
       total: "8,677",
       success: "546",
       failure: "50",
-      status: "杩涜涓? as const,
+      status: "进行中" as const,
       progress: 34,
       duration: "1h56min",
       dataSource: "bysy/djienf/rerrr"
     },
     {
-      modality: "鍥剧墖鏁版嵁",
-      category: "闂ㄨ瘖灏辫瘖璁板綍",
+      modality: "图片数据",
+      category: "门诊就诊记录",
       total: "1,348",
       success: "42",
       failure: "23",
-      status: "杩涜涓? as const,
+      status: "进行中" as const,
       progress: 12,
       duration: "1h56min",
       dataSource: "bysy/djienf/bfgfg/drerre"
     },
     {
-      modality: "鍥剧墖鏁版嵁",
-      category: "闂ㄨ瘖鍖诲槺",
+      modality: "图片数据",
+      category: "门诊医嘱",
       total: "2,348",
       success: "342",
       failure: "0",
-      status: "杩涜涓? as const,
+      status: "进行中" as const,
       progress: 45,
       duration: "1h56min",
       dataSource: "bysy/gferer/fbnbn"
     }
   ]);
 
-  // Timer to increment progress on '杩涜涓? items of detailRows
+  // Timer to increment progress on '进行中' items of detailRows
   useEffect(() => {
     const timer = setInterval(() => {
       setDetailRows(prev => prev.map(row => {
-        if (row.status === "杩涜涓? && row.progress !== undefined && row.progress < 100) {
+        if (row.status === "进行中" && row.progress !== undefined && row.progress < 100) {
           const nextProgress = Math.min(row.progress + 1, 99);
           const totalNum = parseInt(row.total.replace(/,/g, '')) || 0;
           const failureNum = parseInt(row.failure.replace(/,/g, '')) || 0;
@@ -378,7 +377,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
   const [selectedDicomTaskIdForK, setSelectedDicomTaskIdForK] = useState(project.kTasks?.dicomTaskId || "");
   const [isCalculatingK, setIsCalculatingK] = useState(false);
 
-  // Global K-value calculation state next to "鍒涘缓浠诲姟" button
+  // Global K-value calculation state next to "创建任务" button
   const [globalKCalcState, setGlobalKCalcState] = useState<'idle' | 'calculating' | 'completed'>('idle');
   const [globalKValue, setGlobalKValue] = useState<number | null>(null);
   const [showReadOnlyMapping, setShowReadOnlyMapping] = useState(false);
@@ -391,7 +390,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
 
   // New task form state
   const [newTaskName, setNewTaskName] = useState("");
-  const [newModality, setNewModality] = useState<'CSV 缁撴瀯鍖栨枃鏈暟鎹? | 'DICOM 褰卞儚鏁版嵁'>('CSV 缁撴瀯鍖栨枃鏈暟鎹?);
+  const [newModality, setNewModality] = useState<'CSV 结构化文本数据' | 'DICOM 影像数据'>('CSV 结构化文本数据');
   const [newSelectedServers, setNewSelectedServers] = useState<string[]>([]);
   const [newTimeMode, setNewTimeMode] = useState<'immediate' | 'scheduled'>('immediate');
   
@@ -409,13 +408,13 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
   const [tempInterval, setTempInterval] = useState(10);
   const [statsViewField, setStatsViewField] = useState<{ id: string, name: string, fieldType: 'text' | 'num', interval?: number, isDicom: boolean } | null>(null);
 
-  // Automatically progress simulated "鎵ц涓? tasks
+  // Automatically progress simulated "执行中" tasks
   useEffect(() => {
     const timer = setInterval(() => {
       setTasks(prevTasks => {
         let changed = false;
         const nextTasks = prevTasks.map(task => {
-          if (task.status === '鎵ц涓? && task.id !== 'TASK-1002') {
+          if (task.status === '执行中' && task.id !== 'TASK-1002') {
             changed = true;
             const currentProgress = task.progress !== undefined ? task.progress : 0;
             if (currentProgress < 100) {
@@ -431,7 +430,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
               return {
                 ...task,
                 progress: isCompleted ? undefined : nextProgress,
-                status: isCompleted ? '宸插畬鎴? : '鎵ц涓?,
+                status: isCompleted ? '已完成' : '执行中',
                 success: successAmt,
                 failure: failureAmt,
                 endTime: isCompleted ? new Date().toISOString().replace('T', ' ').substring(0, 19) : task.endTime
@@ -449,8 +448,8 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
 
   // Filter tasks by status filter
   const filteredTasks = tasks.filter(task => {
-    if (statusFilter === '鍏ㄩ儴') return true;
-    if (statusFilter === '杩涜涓?) return task.status === '鎵ц涓?;
+    if (statusFilter === '全部') return true;
+    if (statusFilter === '进行中') return task.status === '执行中';
     return task.status === statusFilter;
   });
 
@@ -465,7 +464,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
   const handleLaunchTaskSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskName.trim()) {
-      alert("璇疯緭鍏ヤ换鍔″悕绉?);
+      alert("请输入任务名称");
       return;
     }
     
@@ -479,27 +478,27 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
     const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
     
     let scheduledTimeStr = "-";
-    let initStatus: TaskItem['status'] = '鎵ц涓?;
+    let initStatus: TaskItem['status'] = '执行中';
     
     if (newTimeMode === 'scheduled') {
       scheduledTimeStr = scheduledDateTime ? scheduledDateTime.replace('T', ' ') + ':00' : nowStr;
-      initStatus = '绛夊緟鎵ц';
+      initStatus = '等待执行';
     }
 
     const newTask: TaskItem = {
       id: taskId,
       name: newTaskName.trim(),
-      modality: newModality || 'CSV 缁撴瀯鍖栨枃鏈暟鎹?,
+      modality: newModality || 'CSV 结构化文本数据',
       status: initStatus,
       servers: serversToUse,
-      startTime: initStatus === '鎵ц涓? ? nowStr : "-",
+      startTime: initStatus === '执行中' ? nowStr : "-",
       endTime: "-",
       createdAt: nowStr,
       total: 1000,
       success: 0,
       failure: 0,
-      progress: initStatus === '鎵ц涓? ? 0 : undefined,
-      duration: initStatus === '鎵ц涓? ? '1min' : '-'
+      progress: initStatus === '执行中' ? 0 : undefined,
+      duration: initStatus === '执行中' ? '1min' : '-'
     };
 
     setTasks(prev => [newTask, ...prev]);
@@ -507,7 +506,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
 
     // reset form
     setNewTaskName("");
-    setNewModality("CSV 缁撴瀯鍖栨枃鏈暟鎹?);
+    setNewModality("CSV 结构化文本数据");
     setNewSelectedServers([SERVERS[0]]);
     setNewTimeMode("immediate");
     setScheduledDateTime("");
@@ -520,7 +519,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
       if (t.id === taskId) {
         return {
           ...t,
-          status: '鎵ц涓?,
+          status: '执行中',
           startTime: nowStr,
           progress: 0,
           success: 0,
@@ -535,7 +534,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
   const handleCalculateK = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCsvTaskIdForK && !selectedDicomTaskIdForK) {
-      alert("璇烽€夋嫨鑷冲皯涓€涓凡瀹屾垚鐨勫幓鏍囪瘑浠诲姟浠ヨ绠梜鍊?);
+      alert("请选择至少一个已完成的去标识任务以计算k值");
       return;
     }
 
@@ -548,7 +547,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
       const mockActualK = expectedK + Math.floor(Math.random() * 4) + 1;
 
       try {
-        const response = await apiFetch(`/api/projects/${project.id}`, {
+        const response = await fetch(`/api/projects/${project.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -567,11 +566,11 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
           }
           setIsKCalcModalOpen(false);
         } else {
-          alert("璁＄畻k鍊煎け璐ワ紝璇烽噸璇?);
+          alert("计算k值失败，请重试");
         }
       } catch (err) {
         console.error("Failed to compute and save actualK:", err);
-        alert("璁＄畻k鍊煎嚭鐜板紓甯?);
+        alert("计算k值出现异常");
       } finally {
         setIsCalculatingK(false);
       }
@@ -585,7 +584,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
       if (t.id === taskId) {
         return {
           ...t,
-          status: '鎵嬪姩缁撴潫',
+          status: '手动结束',
           endTime: nowStr,
           progress: undefined
         };
@@ -597,7 +596,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
   // Fields mapping for the selected task details page
   const getDetailFields = (): any[] => {
     if (!selectedTaskForDetail) return [];
-    if (selectedTaskForDetail.modality === 'CSV 缁撴瀯鍖栨枃鏈暟鎹?) {
+    if (selectedTaskForDetail.modality === 'CSV 结构化文本数据') {
       return (uploadState && uploadState.parsedCSVFields && uploadState.parsedCSVFields.length > 0)
         ? uploadState.parsedCSVFields
         : STANDARD_CSV_FIELDS;
@@ -654,24 +653,24 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
       ];
     }
 
-    if (fieldName.includes("鎬у埆") || fieldId.includes("gender")) {
+    if (fieldName.includes("性别") || fieldId.includes("gender")) {
       return [
-        { value: "鐢?(Male)", count: 540, pct: 54 },
-        { value: "濂?(Female)", count: 460, pct: 46 },
+        { value: "男 (Male)", count: 540, pct: 54 },
+        { value: "女 (Female)", count: 460, pct: 46 },
       ];
     }
-    if (fieldName.includes("鍖荤枟鏈烘瀯") || fieldName.includes("institution")) {
+    if (fieldName.includes("医疗机构") || fieldName.includes("institution")) {
       return [
-        { value: "鐟為噾鎬婚櫌", count: 780, pct: 78 },
-        { value: "鍗㈡咕鍒嗛櫌", count: 150, pct: 15 },
-        { value: "涓存腐鍒嗛櫌", count: 70, pct: 7 },
+        { value: "瑞金总院", count: 780, pct: 78 },
+        { value: "卢湾分院", count: 150, pct: 15 },
+        { value: "临港分院", count: 70, pct: 7 },
       ];
     }
     // Generic fallback text fields
     return [
-      { value: "绫诲瀷 / 鍒嗙被鍊?A", count: 500, pct: 50 },
-      { value: "绫诲瀷 / 鍒嗙被鍊?B", count: 350, pct: 35 },
-      { value: "绫诲瀷 / 鍒嗙被鍊?C", count: 150, pct: 15 },
+      { value: "类型 / 分类值 A", count: 500, pct: 50 },
+      { value: "类型 / 分类值 B", count: 350, pct: 35 },
+      { value: "类型 / 分类值 C", count: 150, pct: 15 },
     ];
   };
 
@@ -687,19 +686,19 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
               <button 
                 onClick={onBack}
                 className="p-2 hover:bg-slate-100 rounded text-slate-600 border-2 border-slate-200 hover:border-slate-400 transition-all cursor-pointer"
-                title="杩斿洖椤圭洰鍒楄〃"
+                title="返回项目列表"
               >
                 <ArrowLeft className="w-4.5 h-4.5 stroke-[2.5]" />
               </button>
               <div>
                 <div className="flex items-center space-x-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  <span>椤圭洰绠＄悊</span>
+                  <span>项目管理</span>
                   <span className="text-slate-300">/</span>
                   <span className="truncate max-w-[200px]">{project.name}</span>
                   <span className="text-slate-300">/</span>
-                  <span className="text-blue-600 font-black">鍖垮悕鍖栦换鍔?/span>
+                  <span className="text-blue-600 font-black">匿名化任务</span>
                 </div>
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">鍖垮悕鍖栦换鍔?/h1>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">匿名化任务</h1>
               </div>
             </div>
           </div>
@@ -708,38 +707,38 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
             {/* Filter Dropdown */}
             <div className="flex items-center space-x-2 text-xs font-bold text-slate-700">
-              <span className="text-slate-500 font-bold shrink-0">浠诲姟鐘舵€侊細</span>
+              <span className="text-slate-500 font-bold shrink-0">任务状态：</span>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white text-slate-800 cursor-pointer min-w-[120px]"
               >
-                <option value="鍏ㄩ儴">鍏ㄩ儴</option>
-                <option value="鍚姩涓?>鍚姩涓?/option>
-                <option value="杩涜涓?>杩涜涓?/option>
-                <option value="寮傚父涓柇">寮傚父涓柇</option>
-                <option value="鎵嬪姩缁撴潫">鎵嬪姩缁撴潫</option>
-                <option value="宸插畬鎴?>宸插畬鎴?/option>
+                <option value="全部">全部</option>
+                <option value="启动中">启动中</option>
+                <option value="进行中">进行中</option>
+                <option value="异常中断">异常中断</option>
+                <option value="手动结束">手动结束</option>
+                <option value="已完成">已完成</option>
               </select>
             </div>
 
             <div className="flex items-center space-x-2">
-              {/* Display "璁＄畻涓? during loading */}
+              {/* Display "计算中" during loading */}
               {globalKCalcState === 'calculating' && (
                 <span className="flex items-center space-x-1 px-3.5 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs font-black animate-pulse">
                   <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
-                  <span>璁＄畻涓?/span>
+                  <span>计算中</span>
                 </span>
               )}
 
               {/* Display K-value after calculation completed */}
               {globalKCalcState === 'completed' && globalKValue !== null && (
                 <span className="inline-flex items-center px-3.5 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-black">
-                  k鍊? {globalKValue}
+                  k值: {globalKValue}
                 </span>
               )}
 
-              {/* "璁＄畻k鍊? Button */}
+              {/* "计算k值" Button */}
               {globalKCalcState !== 'calculating' && (
                 <button
                   onClick={() => {
@@ -751,7 +750,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                   }}
                   className="flex items-center justify-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 px-4 py-2.5 rounded text-xs font-black uppercase tracking-wider transition-colors border border-slate-300 shadow-2xs cursor-pointer"
                 >
-                  <span>璁＄畻k鍊?/span>
+                  <span>计算k值</span>
                 </button>
               )}
 
@@ -763,7 +762,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded text-xs font-black uppercase tracking-wider shadow-md shadow-blue-200/50 transition-colors cursor-pointer border-0"
               >
                 <Plus className="w-4 h-4 stroke-[3px]" />
-                <span>鍒涘缓浠诲姟</span>
+                <span>创建任务</span>
               </button>
             </div>
           </div>
@@ -774,12 +773,12 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-wider border-b border-slate-200">
-                    <th className="py-4.5 px-5">浠诲姟鍚嶇О</th>
-                    <th className="py-4.5 px-4 text-center">浠诲姟鐘舵€?/th>
-                    <th className="py-4.5 px-4 text-center">浠诲姟鎯呭喌 (鎬?鎴愬姛/澶辫触)</th>
-                    <th className="py-4.5 px-4">浠诲姟寮€濮?~ 缁撴潫鏃堕棿</th>
-                    <th className="py-4.5 px-4 text-center">鑰楁椂</th>
-                    <th className="py-4.5 px-5 text-center">鎿嶄綔</th>
+                    <th className="py-4.5 px-5">任务名称</th>
+                    <th className="py-4.5 px-4 text-center">任务状态</th>
+                    <th className="py-4.5 px-4 text-center">任务情况 (总/成功/失败)</th>
+                    <th className="py-4.5 px-4">任务开始 ~ 结束时间</th>
+                    <th className="py-4.5 px-4 text-center">耗时</th>
+                    <th className="py-4.5 px-5 text-center">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
@@ -797,20 +796,20 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                           <td className="py-4 px-4 text-center">
                             <div className="flex flex-col items-center justify-center space-y-1">
                               <span className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${
-                                task.status === '宸插畬鎴? ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                task.status === '鎵ц涓? ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                task.status === '鍚姩涓? ? 'bg-sky-50 text-sky-700 border-sky-200 animate-pulse' :
-                                task.status === '绛夊緟鎵ц' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                task.status === '寮傚父涓柇' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                task.status === '已完成' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                task.status === '执行中' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                task.status === '启动中' ? 'bg-sky-50 text-sky-700 border-sky-200 animate-pulse' :
+                                task.status === '等待执行' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                task.status === '异常中断' ? 'bg-rose-50 text-rose-700 border-rose-200' :
                                 'bg-slate-100 text-slate-600 border-slate-300'
                               }`}>
-                                {(task.status === '鎵ц涓? || task.status === '鍚姩涓?) && <Loader2 className="w-2.5 h-2.5 animate-spin text-blue-600 mr-0.5" />}
-                                <span>{task.status === '鎵ц涓? ? '杩涜涓? : task.status}</span>
+                                {(task.status === '执行中' || task.status === '启动中') && <Loader2 className="w-2.5 h-2.5 animate-spin text-blue-600 mr-0.5" />}
+                                <span>{task.status === '执行中' ? '进行中' : task.status}</span>
                               </span>
-                              {task.status === '鎵ц涓? && task.progress !== undefined && task.id !== 'TASK-1002' && (
+                              {task.status === '执行中' && task.progress !== undefined && task.id !== 'TASK-1002' && (
                                 <div className="w-24 mt-1">
                                   <div className="flex justify-between text-[9px] text-slate-400 font-bold mb-0.5">
-                                    <span>杩涘害</span>
+                                    <span>进度</span>
                                     <span>{task.progress}%</span>
                                   </div>
                                   <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden border border-slate-200">
@@ -825,7 +824,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
 
                           {/* Situation counts, formatted differently by data modality */}
                           <td className="py-4 px-4">
-                            {task.status === '鍚姩涓? ? null : (() => {
+                            {task.status === '启动中' ? null : (() => {
                               const total = task.total || 1000;
                               const success = task.success || 0;
                               const failure = task.failure || 0;
@@ -854,26 +853,26 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                                 <div className="flex flex-col space-y-1.5 font-bold text-[11px] leading-tight text-slate-700 min-w-[220px]">
                                   {/* CSV */}
                                   <div className="flex items-center justify-between">
-                                    <span className="text-slate-500 font-medium">CSV锛?/span>
+                                    <span className="text-slate-500 font-medium">CSV：</span>
                                     <span className="font-mono text-slate-900">
                                       {csv_total}/{csv_success}/{csv_failure}
-                                      <span className="text-blue-600 ml-1 font-black">锛坽csv_pct}%锛?/span>
+                                      <span className="text-blue-600 ml-1 font-black">（{csv_pct}%）</span>
                                     </span>
                                   </div>
                                   {/* DICOM */}
                                   <div className="flex items-center justify-between border-t border-slate-100 pt-1">
-                                    <span className="text-slate-500 font-medium">DICOM锛?/span>
+                                    <span className="text-slate-500 font-medium">DICOM：</span>
                                     <span className="font-mono text-slate-900">
                                       {dicom_total}/{dicom_success}/{dicom_failure}
-                                      <span className="text-indigo-600 ml-1 font-black">锛坽dicom_pct}%锛?/span>
+                                      <span className="text-indigo-600 ml-1 font-black">（{dicom_pct}%）</span>
                                     </span>
                                   </div>
                                   {/* Image */}
                                   <div className="flex items-center justify-between border-t border-slate-100 pt-1">
-                                    <span className="text-slate-500 font-medium">鍥剧墖锛?/span>
+                                    <span className="text-slate-500 font-medium">图片：</span>
                                     <span className="font-mono text-slate-900">
                                       {image_total}/{image_success}/{image_failure}
-                                      <span className="text-violet-600 ml-1 font-black">锛坽image_pct}%锛?/span>
+                                      <span className="text-violet-600 ml-1 font-black">（{image_pct}%）</span>
                                     </span>
                                   </div>
                                 </div>
@@ -883,9 +882,9 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
 
                           {/* Start~End time */}
                           <td className="py-4 px-4 font-mono text-[11px] text-slate-600 whitespace-nowrap">
-                            <div>濮? {task.startTime}</div>
-                            {task.status !== '鍚姩涓? && task.status !== '鎵ц涓? && task.endTime && task.endTime !== '-' && (
-                              <div className="mt-1 text-slate-400">缁? {task.endTime}</div>
+                            <div>始: {task.startTime}</div>
+                            {task.status !== '启动中' && task.status !== '执行中' && task.endTime && task.endTime !== '-' && (
+                              <div className="mt-1 text-slate-400">终: {task.endTime}</div>
                             )}
                           </td>
 
@@ -898,7 +897,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                           <td className="py-4 px-5 text-center">
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5">
                               {/* Rerun Failed if conditions are met: latest task, completed, has failures */}
-                              {((isLatestTask && task.status === '宸插畬鎴? && task.failure > 0) || task.name === '20260714-001') && (
+                              {((isLatestTask && task.status === '已完成' && task.failure > 0) || task.name === '20260714-001') && (
                                 <button
                                   onClick={() => {
                                     if (task.name === '20260714-001') {
@@ -909,74 +908,74 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                                   }}
                                   className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-black rounded text-[10px] shadow-2xs transition-all cursor-pointer border-0"
                                 >
-                                  <span>澶辫触閲嶈窇</span>
+                                  <span>失败重跑</span>
                                 </button>
                               )}
 
-                              {/* 鍚姩涓? 鏄剧ず銆愮粨鏉熶换鍔°€?*/}
-                              {task.status === '鍚姩涓? && (
+                              {/* 启动中: 显示【结束任务】 */}
+                              {task.status === '启动中' && (
                                 <button
                                   onClick={() => setStopTaskConfirm(task)}
                                   className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-black rounded text-[10px] border border-rose-200 transition-colors cursor-pointer"
                                 >
-                                  <span>缁撴潫浠诲姟</span>
+                                  <span>结束任务</span>
                                 </button>
                               )}
 
-                              {/* 绛夊緟鎵ц: 鏄剧ず銆愮珛鍗虫墽琛屻€?*/}
-                              {task.status === '绛夊緟鎵ц' && (
+                              {/* 等待执行: 显示【立即执行】 */}
+                              {task.status === '等待执行' && (
                                 <button
                                   onClick={() => handleStartTaskImmediately(task.id)}
                                   className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded text-[10px] shadow-2xs transition-colors cursor-pointer border-0"
                                 >
-                                  <span>绔嬪嵆鎵ц</span>
+                                  <span>立即执行</span>
                                 </button>
                               )}
 
-                              {/* 鎵ц涓? 鏄剧ず銆愮粨鏉熶换鍔°€佽鎯呫€?*/}
-                              {task.status === '鎵ц涓? && (
+                              {/* 执行中: 显示【结束任务、详情】 */}
+                              {task.status === '执行中' && (
                                 <>
                                   <button
                                     onClick={() => setStopTaskConfirm(task)}
                                     className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-black rounded text-[10px] border border-rose-200 transition-colors cursor-pointer"
                                   >
-                                    <span>缁撴潫浠诲姟</span>
+                                    <span>结束任务</span>
                                   </button>
                                   <button
                                     onClick={() => setSelectedTaskForDetail(task)}
                                     className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black rounded text-[10px] border border-slate-300 transition-colors cursor-pointer"
                                   >
-                                    <span>璇︽儏</span>
+                                    <span>详情</span>
                                   </button>
                                 </>
                               )}
 
-                              {/* 宸插畬鎴? 鏄剧ず銆愯鎯呫€?*/}
-                              {task.status === '宸插畬鎴? && (
+                              {/* 已完成: 显示【详情】 */}
+                              {task.status === '已完成' && (
                                 <button
                                   onClick={() => setSelectedTaskForDetail(task)}
                                   className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-black rounded text-[10px] border border-blue-200 transition-colors cursor-pointer"
                                 >
-                                  <span>璇︽儏</span>
+                                  <span>详情</span>
                                 </button>
                               )}
 
-                              {/* 寮傚父涓柇: 鏄剧ず銆愮珛鍗虫墽琛屻€佺粨鏉熶换鍔°€佽鎯呫€?*/}
-                              {task.status === '寮傚父涓柇' && (
+                              {/* 异常中断: 显示【立即执行、结束任务、详情】 */}
+                              {task.status === '异常中断' && (
                                 <>
                                   {task.id === 'TASK-1004' ? (
                                     <button
                                       onClick={() => setTaskNotSupportedAlertOpen(true)}
                                       className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded text-[10px] shadow-2xs transition-colors cursor-pointer border-0"
                                     >
-                                      <span>缁х画鎵ц</span>
+                                      <span>继续执行</span>
                                     </button>
                                   ) : (
                                     <button
                                       onClick={() => handleStartTaskImmediately(task.id)}
                                       className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded text-[10px] shadow-2xs transition-colors cursor-pointer border-0"
                                     >
-                                      <span>绔嬪嵆鎵ц</span>
+                                      <span>立即执行</span>
                                     </button>
                                   )}
 
@@ -985,7 +984,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                                       onClick={() => setStopTaskConfirm(task)}
                                       className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-black rounded text-[10px] border border-rose-200 transition-colors cursor-pointer"
                                     >
-                                      <span>缁撴潫浠诲姟</span>
+                                      <span>结束任务</span>
                                     </button>
                                   )}
 
@@ -993,18 +992,18 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                                     onClick={() => setSelectedTaskForDetail(task)}
                                     className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black rounded text-[10px] border border-slate-300 transition-colors cursor-pointer"
                                   >
-                                    <span>璇︽儏</span>
+                                    <span>详情</span>
                                   </button>
                                 </>
                               )}
 
-                              {/* 鎵嬪姩缁撴潫: 鏄剧ず銆愯鎯呫€?涓嶆樉绀虹珛鍗虫墽琛? */}
-                              {task.status === '鎵嬪姩缁撴潫' && (
+                              {/* 手动结束: 显示【详情】(不显示立即执行) */}
+                              {task.status === '手动结束' && (
                                 <button
                                   onClick={() => setSelectedTaskForDetail(task)}
                                   className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black rounded text-[10px] border border-slate-300 transition-colors cursor-pointer"
                                 >
-                                  <span>璇︽儏</span>
+                                  <span>详情</span>
                                 </button>
                               )}
                             </div>
@@ -1015,7 +1014,8 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                   ) : (
                     <tr>
                       <td colSpan={7} className="py-12 text-center text-slate-400 font-medium bg-slate-50/50">
-                        鏈尮閰嶅埌绗﹀悎鏉′欢鐨勪换鍔″悕绉般€?                      </td>
+                        未匹配到符合条件的任务名称。
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -1031,20 +1031,20 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             <button 
               onClick={() => setSelectedTaskForDetail(null)}
               className="p-2 hover:bg-slate-100 rounded text-slate-600 border-2 border-slate-200 hover:border-slate-400 transition-all cursor-pointer"
-              title="杩斿洖鍖垮悕鍖栦换鍔″垪琛?
+              title="返回匿名化任务列表"
             >
               <ArrowLeft className="w-4.5 h-4.5 stroke-[2.5]" />
             </button>
             <div>
               <div className="flex items-center space-x-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                <span>椤圭洰绠＄悊</span>
+                <span>项目管理</span>
                 <span className="text-slate-300">/</span>
-                <span>鍖垮悕鍖栦换鍔?/span>
+                <span>匿名化任务</span>
                 <span className="text-slate-300">/</span>
-                <span className="text-blue-600 font-black">浠诲姟璇︽儏</span>
+                <span className="text-blue-600 font-black">任务详情</span>
               </div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
-                浠诲姟璇︽儏
+                任务详情
               </h1>
             </div>
           </div>
@@ -1056,24 +1056,24 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             {/* Row 1: Task Name + Status, and Task ID */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-4">
               <div className="space-y-1.5">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">浠诲姟鍚嶇О</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">任务名称</span>
                 <div className="flex flex-wrap items-center gap-2.5">
                   <span className="text-base font-black text-white tracking-tight leading-snug">
                     {selectedTaskForDetail.name}
                   </span>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                    selectedTaskForDetail.status === '宸插畬鎴? ? 'bg-emerald-600 text-white' :
-                    selectedTaskForDetail.status === '鎵ц涓? ? 'bg-blue-600 text-white' :
-                    selectedTaskForDetail.status === '绛夊緟鎵ц' ? 'bg-amber-600 text-white' :
-                    selectedTaskForDetail.status === '寮傚父涓柇' ? 'bg-rose-600 text-white' :
+                    selectedTaskForDetail.status === '已完成' ? 'bg-emerald-600 text-white' :
+                    selectedTaskForDetail.status === '执行中' ? 'bg-blue-600 text-white' :
+                    selectedTaskForDetail.status === '等待执行' ? 'bg-amber-600 text-white' :
+                    selectedTaskForDetail.status === '异常中断' ? 'bg-rose-600 text-white' :
                     'bg-slate-600 text-white'
                   }`}>
-                    {selectedTaskForDetail.status === '鎵ц涓? ? '杩涜涓? : selectedTaskForDetail.status}
+                    {selectedTaskForDetail.status === '执行中' ? '进行中' : selectedTaskForDetail.status}
                   </span>
                 </div>
               </div>
               <div className="md:text-right shrink-0">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">浠诲姟ID</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">任务ID</span>
                 <span className="text-xs font-mono text-blue-400 font-black tracking-wider block mt-1">{selectedTaskForDetail.id}</span>
               </div>
             </div>
@@ -1081,23 +1081,23 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             {/* Row 2: Created Time, and execution times + duration */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs font-bold text-slate-300">
               <div className="space-y-1.5">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">鍒涘缓鏃堕棿</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">创建时间</span>
                 <span className="text-sm font-mono text-slate-200 mt-1 block">
                   {selectedTaskForDetail.createdAt || "2026-07-14 09:55:00"}
                 </span>
               </div>
               <div className="space-y-1.5">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">鎵ц鏃堕棿鍙婅€楁椂</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">执行时间及耗时</span>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0 mt-1">
-                  <div className="text-xs font-mono text-slate-400">濮? {selectedTaskForDetail.startTime}</div>
-                  <div className="text-xs font-mono text-slate-400">缁? {selectedTaskForDetail.endTime}</div>
+                  <div className="text-xs font-mono text-slate-400">始: {selectedTaskForDetail.startTime}</div>
+                  <div className="text-xs font-mono text-slate-400">终: {selectedTaskForDetail.endTime}</div>
                   <span className="text-[10px] font-black text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 whitespace-nowrap self-start sm:self-auto sm:ml-2">
-                    鑰楁椂: {selectedTaskForDetail.duration || "1h56m"}
+                    耗时: {selectedTaskForDetail.duration || "1h56m"}
                   </span>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">鏁版嵁瀛樺偍浣嶇疆</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">数据存储位置</span>
                 <span className="text-sm font-mono text-slate-200 mt-1 block">
                   bysy/niminghua/jieguo
                 </span>
@@ -1111,45 +1111,45 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-wider border-b border-slate-200">
-                    <th className="py-4 px-5">鏁版嵁妯℃€?/th>
-                    <th className="py-4 px-4">鍒嗙被</th>
-                    <th className="py-4 px-4 text-center">鎬绘暟</th>
-                    <th className="py-4 px-4 text-center">鎴愬姛鏁?/th>
-                    <th className="py-4 px-4 text-center">澶辫触鏁?/th>
-                    <th className="py-4 px-4 text-center">鐘舵€?/th>
-                    <th className="py-4 px-4 text-center">鑰楁椂</th>
-                    <th className="py-4 px-5 text-center">鍖垮悕鍖栫瓥鐣?/th>
-                    <th className="py-4 px-5 text-center">鏁版嵁鏉ユ簮</th>
-                    <th className="py-4 px-5 text-center">鎶ラ敊淇℃伅</th>
+                    <th className="py-4 px-5">数据模态</th>
+                    <th className="py-4 px-4">分类</th>
+                    <th className="py-4 px-4 text-center">总数</th>
+                    <th className="py-4 px-4 text-center">成功数</th>
+                    <th className="py-4 px-4 text-center">失败数</th>
+                    <th className="py-4 px-4 text-center">状态</th>
+                    <th className="py-4 px-4 text-center">耗时</th>
+                    <th className="py-4 px-5 text-center">匿名化策略</th>
+                    <th className="py-4 px-5 text-center">数据来源</th>
+                    <th className="py-4 px-5 text-center">报错信息</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
                   {(() => {
                     const status = selectedTaskForDetail.status;
                     let filteredRows = [...detailRows];
-                    if (status === '宸插畬鎴?) {
-                      filteredRows = detailRows.filter(row => row.status === '宸插畬鎴?);
-                    } else if (status === '寮傚父涓柇') {
-                      filteredRows = detailRows.filter(row => row.status === '宸插畬鎴? || row.status === '寮傚父涓柇');
-                    } else if (status === '鎵嬪姩缁撴潫') {
+                    if (status === '已完成') {
+                      filteredRows = detailRows.filter(row => row.status === '已完成');
+                    } else if (status === '异常中断') {
+                      filteredRows = detailRows.filter(row => row.status === '已完成' || row.status === '异常中断');
+                    } else if (status === '手动结束') {
                       filteredRows = detailRows.map(row => ({
                         ...row,
-                        status: row.status === '杩涜涓? ? '鎵嬪姩缁撴潫' as const : row.status
+                        status: row.status === '进行中' ? '手动结束' as const : row.status
                       }));
                     }
                     return filteredRows.map((row, idx) => {
-                      const isMedia = row.modality === "DICOM褰卞儚鏁版嵁" || row.modality === "鍥剧墖鏁版嵁";
+                      const isMedia = row.modality === "DICOM影像数据" || row.modality === "图片数据";
                       const hasFailures = parseInt(row.failure.replace(/,/g, '')) > 0;
 
                       return (
                         <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
-                          {/* 鏁版嵁妯℃€?*/}
+                          {/* 数据模态 */}
                           <td className="py-4 px-5 text-slate-900 font-black">{row.modality}</td>
 
-                          {/* 鍒嗙被 */}
+                          {/* 分类 */}
                           <td className="py-4 px-4 text-slate-500 font-medium">{row.category}</td>
 
-                          {/* 鎬绘暟 */}
+                          {/* 总数 */}
                           <td className="py-4 px-4 text-center font-mono">
                             {isMedia ? (
                               <button
@@ -1163,10 +1163,10 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                             )}
                           </td>
 
-                          {/* 鎴愬姛鏁?*/}
+                          {/* 成功数 */}
                           <td className="py-4 px-4 text-center font-mono text-emerald-600">{row.success}</td>
 
-                          {/* 澶辫触鏁?*/}
+                          {/* 失败数 */}
                           <td className="py-4 px-4 text-center font-mono">
                             {hasFailures ? (
                               <button
@@ -1183,23 +1183,23 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                             )}
                           </td>
 
-                          {/* 鐘舵€?*/}
+                          {/* 状态 */}
                           <td className="py-4 px-4 text-center">
                             <div className="flex flex-col items-center justify-center space-y-1">
                               <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-black border ${
-                                row.status === '宸插畬鎴? ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                row.status === '杩涜涓? ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                row.status === '寮傚父涓柇' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                                row.status === '鎵嬪姩缁撴潫' ? 'bg-slate-100 text-slate-700 border-slate-300' :
+                                row.status === '已完成' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                row.status === '进行中' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                row.status === '异常中断' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                row.status === '手动结束' ? 'bg-slate-100 text-slate-700 border-slate-300' :
                                 'bg-slate-100 text-slate-600 border-slate-300'
                               }`}>
-                                {row.status === '杩涜涓? && <Loader2 className="w-2.5 h-2.5 animate-spin text-blue-600 shrink-0" />}
+                                {row.status === '进行中' && <Loader2 className="w-2.5 h-2.5 animate-spin text-blue-600 shrink-0" />}
                                 <span>{row.status}</span>
                               </span>
-                              {row.status === '杩涜涓? && row.progress !== undefined && (
+                              {row.status === '进行中' && row.progress !== undefined && (
                                 <div className="w-20 mt-1">
                                   <div className="flex justify-between text-[8px] text-slate-400 font-bold mb-0.5">
-                                    <span>杩涘害</span>
+                                    <span>进度</span>
                                     <span>{row.progress}%</span>
                                   </div>
                                   <div className="w-full bg-slate-100 h-0.5 rounded-full overflow-hidden">
@@ -1210,27 +1210,27 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                             </div>
                           </td>
 
-                          {/* 鑰楁椂 */}
+                          {/* 耗时 */}
                           <td className="py-4 px-4 text-center font-mono text-slate-500">{row.duration}</td>
 
-                          {/* 鍖垮悕鍖栫瓥鐣?*/}
+                          {/* 匿名化策略 */}
                           <td className="py-4 px-5 text-center">
                             <button
                               onClick={() => setViewingRuleRow(row)}
                               className="text-blue-600 hover:text-blue-800 font-black cursor-pointer bg-transparent border-0"
                             >
-                              鏌ョ湅
+                              查看
                             </button>
                           </td>
 
-                          {/* 鏁版嵁鏉ユ簮 */}
+                          {/* 数据来源 */}
                           <td className="py-4 px-5 text-center text-slate-500 font-medium">
                             {row.dataSource || "-"}
                           </td>
 
-                          {/* 鎶ラ敊淇℃伅 */}
+                          {/* 报错信息 */}
                           <td className="py-4 px-5 text-center font-bold text-rose-600">
-                            {row.status === '寮傚父涓柇' ? '杩炴帴涓昏妭鐐硅秴鏃讹紝浼犺緭寮傚父涓柇 (閿欒鐮? 504)' : '-'}
+                            {row.status === '异常中断' ? '连接主节点超时，传输异常中断 (错误码: 504)' : '-'}
                           </td>
                         </tr>
                       );
@@ -1251,7 +1251,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="w-5 h-5 text-amber-400" />
-                <h3 className="font-black text-sm uppercase tracking-wider">鍒涘缓浠诲姟</h3>
+                <h3 className="font-black text-sm uppercase tracking-wider">创建任务</h3>
               </div>
               <button 
                 onClick={() => setIsLaunchModalOpen(false)}
@@ -1264,7 +1264,8 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             {/* Modal Body */}
             <div className="p-6 space-y-5 text-left">
               <div className="text-slate-700 text-sm font-bold leading-relaxed">
-                鏈」鐩笅瀛樺湪杩涜涓殑浠诲姟锛屾棤娉曞啀娆″垱寤轰换鍔★紝鎮ㄥ彲浠ョ瓑寰呬换鍔℃墽琛屽畬鎴愭垨鎵嬪姩缁撴潫浠诲姟鍚庡啀娆″垱寤轰换鍔?              </div>
+                本项目下存在进行中的任务，无法再次创建任务，您可以等待任务执行完成或手动结束任务后再次创建任务
+              </div>
 
               {/* Action buttons */}
               <div className="flex justify-end pt-4 border-t border-slate-100">
@@ -1273,7 +1274,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                   onClick={() => setIsLaunchModalOpen(false)}
                   className="px-6 py-2 bg-slate-800 hover:bg-slate-950 text-white text-xs font-black rounded uppercase tracking-wider transition-colors border-0 cursor-pointer"
                 >
-                  鍏抽棴
+                  关闭
                 </button>
               </div>
             </div>
@@ -1289,7 +1290,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="w-5 h-5 text-amber-400 animate-bounce" />
-                <h3 className="font-black text-sm uppercase tracking-wider">鎻愮ず</h3>
+                <h3 className="font-black text-sm uppercase tracking-wider">提示</h3>
               </div>
               <button 
                 onClick={() => setPolicyChangedAlertOpen(false)}
@@ -1301,7 +1302,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             {/* Modal Content */}
             <div className="p-6 space-y-4 text-left">
               <div className="text-slate-700 text-sm font-bold leading-relaxed">
-                鍖垮悕鍖栫瓥鐣ュ瓨鍦ㄥ彉鏇达紝鏃犳硶鎵ц褰撳墠浠诲姟锛岃閲嶆柊鍒涘缓浠诲姟
+                匿名化策略存在变更，无法执行当前任务，请重新创建任务
               </div>
             </div>
             {/* Modal Footer */}
@@ -1310,7 +1311,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 onClick={() => setPolicyChangedAlertOpen(false)}
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-950 text-white text-xs font-black rounded uppercase tracking-wider transition-colors cursor-pointer border-0"
               >
-                鍏抽棴
+                关闭
               </button>
             </div>
           </div>
@@ -1325,7 +1326,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="w-5 h-5 text-amber-400 animate-bounce" />
-                <h3 className="font-black text-sm uppercase tracking-wider">鎻愮ず</h3>
+                <h3 className="font-black text-sm uppercase tracking-wider">提示</h3>
               </div>
               <button 
                 onClick={() => setTaskNotSupportedAlertOpen(false)}
@@ -1337,7 +1338,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             {/* Modal Content */}
             <div className="p-6 space-y-4 text-left">
               <div className="text-slate-700 text-sm font-bold leading-relaxed">
-                鏈」鐩笅宸插瓨鍦ㄦ柊鐨勪换鍔★紝鏆備笉鏀寔鍦ㄥ綋鍓嶄换鍔′笂鎵ц鎿嶄綔
+                本项目下已存在新的任务，暂不支持在当前任务上执行操作
               </div>
             </div>
             {/* Modal Footer */}
@@ -1346,7 +1347,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 onClick={() => setTaskNotSupportedAlertOpen(false)}
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-950 text-white text-xs font-black rounded uppercase tracking-wider transition-colors cursor-pointer border-0"
               >
-                鍏抽棴
+                关闭
               </button>
             </div>
           </div>
@@ -1361,7 +1362,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="w-5 h-5 text-amber-400 animate-bounce" />
-                <h3 className="font-black text-sm uppercase tracking-wider">纭缁撴潫浠诲姟</h3>
+                <h3 className="font-black text-sm uppercase tracking-wider">确认结束任务</h3>
               </div>
               <button 
                 onClick={() => setStopTaskConfirm(null)}
@@ -1373,7 +1374,8 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             {/* Modal Content */}
             <div className="p-6 space-y-4 text-left">
               <div className="text-slate-700 text-sm font-bold leading-relaxed">
-                鏄惁纭缁撴潫{stopTaskConfirm.name}浠诲姟锛?              </div>
+                是否确认结束{stopTaskConfirm.name}任务？
+              </div>
             </div>
             {/* Modal Footer */}
             <div className="bg-slate-50 px-6 py-3.5 flex justify-end space-x-2">
@@ -1381,7 +1383,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 onClick={() => setStopTaskConfirm(null)}
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-black rounded uppercase tracking-wider transition-colors cursor-pointer border-0"
               >
-                鍙栨秷
+                取消
               </button>
               <button
                 onClick={() => {
@@ -1390,14 +1392,14 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 }}
                 className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded uppercase tracking-wider transition-colors cursor-pointer border-0"
               >
-                纭
+                确认
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ================= VIEW STATS MODAL (鏌ョ湅缁熻寮圭獥) ================= */}
+      {/* ================= VIEW STATS MODAL (查看统计弹窗) ================= */}
       {viewingKCalculatedStats && (() => {
         const stats = viewingKCalculatedStats;
         const totalCount = stats.total;
@@ -1415,7 +1417,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 <div className="flex items-center space-x-2">
                   <BarChart2 className="w-5 h-5 text-emerald-400" />
                   <h3 className="font-black text-sm uppercase tracking-wider">
-                    缁熻缁撴灉-{stats.name}
+                    统计结果-{stats.name}
                   </h3>
                 </div>
                 <button 
@@ -1429,16 +1431,16 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
               {/* Body */}
               <div className="p-6 space-y-4 overflow-y-auto text-left flex-1">
                 <div className="text-xs font-bold text-slate-700">
-                  鎬绘暟锛歿totalCount.toLocaleString()} 
+                  总数：{totalCount.toLocaleString()} 
                 </div>
 
                 <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-wider border-b border-slate-200">
-                        <th className="py-3 px-5">瀛楁鍊?/th>
-                        <th className="py-3 px-4 text-center">鍑虹幇娆℃暟</th>
-                        <th className="py-3 px-4 text-center">鍑虹幇棰戠巼</th>
+                        <th className="py-3 px-5">字段值</th>
+                        <th className="py-3 px-4 text-center">出现次数</th>
+                        <th className="py-3 px-4 text-center">出现频率</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -1457,20 +1459,23 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 {totalPages > 1 && (
                   <div className="flex justify-between items-center bg-slate-50 px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600">
                     <span>
-                      绗?{kCalculatedStatsPage} / {totalPages} 椤?                    </span>
+                      第 {kCalculatedStatsPage} / {totalPages} 页
+                    </span>
                     <div className="flex space-x-1">
                       <button
                         disabled={kCalculatedStatsPage === 1}
                         onClick={() => setKCalculatedStatsPage(prev => Math.max(1, prev - 1))}
                         className="px-2.5 py-1 bg-white border border-slate-300 rounded text-slate-600 text-xs font-bold hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       >
-                        涓婁竴椤?                      </button>
+                        上一页
+                      </button>
                       <button
                         disabled={kCalculatedStatsPage === totalPages}
                         onClick={() => setKCalculatedStatsPage(prev => Math.min(totalPages, prev + 1))}
                         className="px-2.5 py-1 bg-white border border-slate-300 rounded text-slate-600 text-xs font-bold hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       >
-                        涓嬩竴椤?                      </button>
+                        下一页
+                      </button>
                     </div>
                   </div>
                 )}
@@ -1482,7 +1487,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                   onClick={() => setViewingKCalculatedStats(null)}
                   className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black text-xs rounded-xl cursor-pointer transition-colors border-0"
                 >
-                  鍏抽棴
+                  关闭
                 </button>
               </div>
             </div>
@@ -1499,7 +1504,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
               <div className="flex items-center space-x-2">
                 <Cpu className="w-5 h-5 text-purple-400 animate-pulse" />
                 <h3 className="font-black text-sm uppercase tracking-wider">
-                  {project.actualK !== undefined ? '淇敼k鍊艰绠椾换鍔?& 閲嶆柊璁＄畻' : '璁＄畻瀹為檯k鍊?}
+                  {project.actualK !== undefined ? '修改k值计算任务 & 重新计算' : '计算实际k值'}
                 </h3>
               </div>
               <button 
@@ -1516,27 +1521,27 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
               <div className="p-12 flex flex-col items-center justify-center space-y-4 text-center">
                 <Loader2 className="w-10 h-10 text-purple-600 animate-spin" />
                 <p className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                  姝ｅ湪璇诲彇宸插畬鎴愮殑鍘绘爣璇嗘暟鎹泦...
+                  正在读取已完成的去标识数据集...
                 </p>
                 <p className="text-[10px] text-slate-400 font-bold leading-relaxed max-w-xs">
-                  绯荤粺姝ｅ湪骞惰瀵归€夊畾鐨勭粨鏋勫寲鏂囨湰绛変环绫讳笌褰卞儚鍘绘爣缁撴灉杩涜瀹夊叏閲嶅彔鍒嗘瀽涓庨噸鏍囪瘑姒傜巼鐭╅樀纰版挒锛岃€楁椂绾﹂渶鏁扮...
+                  系统正在并行对选定的结构化文本等价类与影像去标结果进行安全重叠分析与重标识概率矩阵碰撞，耗时约需数秒...
                 </p>
               </div>
             ) : (
               <form onSubmit={handleCalculateK} className="p-6 space-y-5 text-left">
                 <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg space-y-1">
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider">椤圭洰瀹夊叏瀹氱骇鍩哄噯</div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider">项目安全定级基准</div>
                   <div className="text-xs font-bold text-slate-700 flex justify-between items-center">
-                    <span>棰勬湡 K-Anonymity 瀹夊叏鍊?</span>
+                    <span>预期 K-Anonymity 安全值:</span>
                     <span className="text-purple-600 font-black bg-purple-50 px-2.5 py-1 rounded border border-purple-100">
-                      棰勬湡k鍊?= {project.expectedK || 5}
+                      预期k值 = {project.expectedK || 5}
                     </span>
                   </div>
                   {project.actualK !== undefined && (
                     <div className="text-xs font-bold text-slate-700 flex justify-between items-center mt-2 pt-2 border-t border-slate-200/60">
-                      <span>褰撳墠宸茶绠楀疄闄?k 鍊?</span>
+                      <span>当前已计算实际 k 值:</span>
                       <span className="text-emerald-600 font-black bg-emerald-50 px-2.5 py-1 rounded border border-emerald-100">
-                        瀹為檯k鍊?= {project.actualK}
+                        实际k值 = {project.actualK}
                       </span>
                     </div>
                   )}
@@ -1545,20 +1550,20 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 {/* CSV Modality Task Selector */}
                 <div>
                   <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
-                    CSV 缁撴瀯鍖栨枃鏈暟鎹?浠诲姟閫夋嫨 (宸插畬鎴?
+                    CSV 结构化文本数据 任务选择 (已完成)
                   </label>
-                  {tasks.filter(t => t.modality === 'CSV 缁撴瀯鍖栨枃鏈暟鎹? && t.status === '宸插畬鎴?).length > 0 ? (
+                  {tasks.filter(t => t.modality === 'CSV 结构化文本数据' && t.status === '已完成').length > 0 ? (
                     <select
                       value={selectedCsvTaskIdForK}
                       onChange={(e) => setSelectedCsvTaskIdForK(e.target.value)}
                       className="w-full p-3 bg-white border border-slate-200 rounded text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-800 cursor-pointer"
                     >
-                      <option value="">-- 涓嶉€夋嫨 (鏈璁＄畻涓嶅悎骞舵妯℃€? --</option>
+                      <option value="">-- 不选择 (本次计算不合并此模态) --</option>
                       {tasks
-                        .filter(t => t.modality === 'CSV 缁撴瀯鍖栨枃鏈暟鎹? && t.status === '宸插畬鎴?)
+                        .filter(t => t.modality === 'CSV 结构化文本数据' && t.status === '已完成')
                         .map(t => (
                           <option key={t.id} value={t.id}>
-                            [{t.id}] {t.name} (瀹屾垚鏃堕棿: {t.endTime || t.createdAt})
+                            [{t.id}] {t.name} (完成时间: {t.endTime || t.createdAt})
                           </option>
                         ))
                       }
@@ -1566,7 +1571,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                   ) : (
                     <div className="p-3 bg-amber-50/50 border border-amber-100 text-amber-700 text-xs font-bold rounded-lg flex items-center space-x-2">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
-                      <span>鏆傛棤宸插畬鎴愮殑 CSV 缁撴瀯鍖栨枃鏈换鍔°€傝鍏堝彂璧峰苟瀹屾垚璇ョ被鍨嬬殑浠诲姟銆?/span>
+                      <span>暂无已完成的 CSV 结构化文本任务。请先发起并完成该类型的任务。</span>
                     </div>
                   )}
                 </div>
@@ -1574,20 +1579,20 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 {/* DICOM Modality Task Selector */}
                 <div>
                   <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
-                    DICOM 褰卞儚鏁版嵁 浠诲姟閫夋嫨 (宸插畬鎴?
+                    DICOM 影像数据 任务选择 (已完成)
                   </label>
-                  {tasks.filter(t => t.modality === 'DICOM 褰卞儚鏁版嵁' && t.status === '宸插畬鎴?).length > 0 ? (
+                  {tasks.filter(t => t.modality === 'DICOM 影像数据' && t.status === '已完成').length > 0 ? (
                     <select
                       value={selectedDicomTaskIdForK}
                       onChange={(e) => setSelectedDicomTaskIdForK(e.target.value)}
                       className="w-full p-3 bg-white border border-slate-200 rounded text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-800 cursor-pointer"
                     >
-                      <option value="">-- 涓嶉€夋嫨 (鏈璁＄畻涓嶅悎骞舵妯℃€? --</option>
+                      <option value="">-- 不选择 (本次计算不合并此模态) --</option>
                       {tasks
-                        .filter(t => t.modality === 'DICOM 褰卞儚鏁版嵁' && t.status === '宸插畬鎴?)
+                        .filter(t => t.modality === 'DICOM 影像数据' && t.status === '已完成')
                         .map(t => (
                           <option key={t.id} value={t.id}>
-                            [{t.id}] {t.name} (瀹屾垚鏃堕棿: {t.endTime || t.createdAt})
+                            [{t.id}] {t.name} (完成时间: {t.endTime || t.createdAt})
                           </option>
                         ))
                       }
@@ -1595,7 +1600,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                   ) : (
                     <div className="p-3 bg-amber-50/50 border border-amber-100 text-amber-700 text-xs font-bold rounded-lg flex items-center space-x-2">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
-                      <span>鏆傛棤宸插畬鎴愮殑 DICOM 褰卞儚鏁版嵁浠诲姟銆傝绛夊€欑幇鏈変换鍔℃墽琛屽畬姣曟垨鍙戣捣鏂颁换鍔°€?/span>
+                      <span>暂无已完成的 DICOM 影像数据任务。请等候现有任务执行完毕或发起新任务。</span>
                     </div>
                   )}
                 </div>
@@ -1604,7 +1609,9 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 <div className="text-[11px] text-slate-500 font-bold leading-relaxed bg-slate-50 p-3 rounded border border-slate-200/55 flex items-start space-x-2">
                   <Info className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
                   <span>
-                    绯荤粺鏀寔鍙€夋嫨涓€涓被鍨嬶紝涔熷彲浠ラ€夋嫨涓や釜绫诲瀷銆傛瘡涓被鍨嬪彧鑳介€夋嫨涓€涓凡瀹屾垚鐘舵€佺殑浠诲姟銆?                    鐐瑰嚮鈥滅‘璁ゅ苟璁＄畻鈥濆悗锛岀郴缁熷皢鑷姩杩涜澶氭ā鎬佺瓑浠风被鑱氬悎鍒嗘瀽锛岃緭鍑烘渶缁堝悎瑙勭殑瀹為檯k鍊煎苟鍥哄寲璁板綍銆?                  </span>
+                    系统支持只选择一个类型，也可以选择两个类型。每个类型只能选择一个已完成状态的任务。
+                    点击“确认并计算”后，系统将自动进行多模态等价类聚合分析，输出最终合规的实际k值并固化记录。
+                  </span>
                 </div>
 
                 {/* Action buttons */}
@@ -1614,7 +1621,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                     onClick={() => setIsKCalcModalOpen(false)}
                     className="px-5 py-2.5 rounded border border-slate-200 text-xs font-black text-slate-600 hover:bg-slate-50 uppercase tracking-wider transition-colors bg-white cursor-pointer"
                   >
-                    鍙栨秷
+                    取消
                   </button>
                   <button
                     type="submit"
@@ -1625,7 +1632,8 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                         : 'bg-purple-600 hover:bg-purple-700 cursor-pointer shadow-purple-100'
                     }`}
                   >
-                    纭骞惰绠?                  </button>
+                    确认并计算
+                  </button>
                 </div>
               </form>
             )}
@@ -1639,19 +1647,19 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
           <div className="bg-white rounded-xl shadow-lg border border-slate-200 max-w-sm w-full p-6 space-y-4 animate-scale-up text-left">
             <div className="flex items-center space-x-2 text-slate-800 font-black text-sm">
               <Sparkles className="w-5 h-5 text-blue-600 animate-pulse" />
-              <span>杈撳叆缁熻闂撮殧 - {intervalPromptField.name}</span>
+              <span>输入统计间隔 - {intervalPromptField.name}</span>
             </div>
             <p className="text-xs text-slate-500 font-bold leading-relaxed">
-              瀵规暟鍊煎瀷瀛楁锛坽intervalPromptField.name}锛夎繘琛屽幓鏍囪瘑鍖栧尯闂村垎妗剁粺璁★紝璇疯緭鍏ユ偍鐨勬暟鍊煎尯闂撮棿闅旓紙姝ラ暱锛夛細
+              对数值型字段（{intervalPromptField.name}）进行去标识化区间分桶统计，请输入您的数值区间间隔（步长）：
             </p>
             <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase mb-1">缁熻闂撮殧 (姝ラ暱)</label>
+              <label className="block text-[11px] font-black text-slate-400 uppercase mb-1">统计间隔 (步长)</label>
               <input 
                 type="number" 
                 value={tempInterval} 
                 onChange={(e) => setTempInterval(Math.max(1, parseInt(e.target.value) || 1))}
                 className="w-full text-sm font-black p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white text-slate-800"
-                placeholder="渚嬪锛? 鎴?10"
+                placeholder="例如：5 或 10"
               />
             </div>
             <div className="flex justify-end space-x-2 text-xs">
@@ -1659,7 +1667,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 onClick={() => setIntervalPromptField(null)}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg cursor-pointer transition-colors border-0"
               >
-                鍙栨秷
+                取消
               </button>
               <button 
                 onClick={() => {
@@ -1669,7 +1677,8 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 }}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg cursor-pointer transition-colors border-0"
               >
-                纭骞舵墽琛?              </button>
+                确认并执行
+              </button>
             </div>
           </div>
         </div>
@@ -1685,9 +1694,9 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                   <BarChart2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-slate-900 text-sm">鎺㈡煡鍘绘爣璇嗙粺璁＄粨鏋?/h3>
+                  <h3 className="font-black text-slate-900 text-sm">探查去标识统计结果</h3>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
-                    瀛楁: {statsViewField.name} ({statsViewField.isDicom ? 'DICOM TAG' : 'CSV 瀛楁'})
+                    字段: {statsViewField.name} ({statsViewField.isDicom ? 'DICOM TAG' : 'CSV 字段'})
                   </p>
                 </div>
               </div>
@@ -1701,8 +1710,8 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
 
             <div className="space-y-4">
               <div className="flex items-center justify-between text-xs font-black text-slate-500">
-                <span>{statsViewField.fieldType === 'text' ? '瀛楁鍘绘爣璇嗛鏁板垎鍙?(鐢遍珮鍒颁綆)' : `鏁板€煎垎甯冨尯闂?(鎸夋闀?${statsViewField.interval || 10} 缁熻)`}</span>
-                <span>鏍锋湰棰戞暟 / 棰戠巼 (鏍锋湰閲? 1000)</span>
+                <span>{statsViewField.fieldType === 'text' ? '字段去标识频数分发 (由高到低)' : `数值分布区间 (按步长 ${statsViewField.interval || 10} 统计)`}</span>
+                <span>样本频数 / 频率 (样本量: 1000)</span>
               </div>
 
               <div className="max-h-60 overflow-y-auto pr-1 space-y-3 scrollbar-thin">
@@ -1716,7 +1725,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                     <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                       <span className="font-mono">{item.value}</span>
                       <span className="font-mono text-slate-600">
-                        {item.count}娆?<span className="text-slate-400 font-bold ml-1.5">({item.pct}%)</span>
+                        {item.count}次 <span className="text-slate-400 font-bold ml-1.5">({item.pct}%)</span>
                       </span>
                     </div>
                     <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
@@ -1735,207 +1744,208 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 onClick={() => setStatsViewField(null)}
                 className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl cursor-pointer transition-colors border-0"
               >
-                鍏抽棴
+                关闭
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ================= NEW MODAL: ANONYMIZATION RULES (鏌ョ湅) ================= */}
+      {/* ================= NEW MODAL: ANONYMIZATION RULES (查看) ================= */}
       {viewingRuleRow && (() => {
         const mockRecordDoc = {
-          hospital: "涓婃捣浜ら€氬ぇ瀛﹀尰瀛﹂櫌闄勫睘鐟為噾鍖婚櫌",
-          title: "鐢靛瓙鐥呭巻闂ㄨ瘖璇婄枟璁板綍",
-          name: "鈻犫枲鈻犫枲 (宸查伄钄?",
-          gender: "鐢?,
-          age: "45宀?,
-          id: "鈻犫枲鈻犫枲鈻犫枲鈻犫枲 (宸查伄钄?",
+          hospital: "上海交通大学医学院附属瑞金医院",
+          title: "电子病历门诊诊疗记录",
+          name: "■■■■ (已遮蔽)",
+          gender: "男",
+          age: "45岁",
+          id: "■■■■■■■■ (已遮蔽)",
           date: "2026-07-14",
-          dept: "蹇冭绠″唴绉?,
+          dept: "心血管内科",
           items: [
-            { label: "涓昏瘔", value: "鍙嶅鑳搁椃銆佹皵淇?鍛紝鍔犻噸2澶╋紝浼村闂撮樀鍙戞€у懠鍚稿洶闅俱€? },
-            { label: "鐜扮梾鍙?, value: "鎮ｈ€呬簬2鍛ㄥ墠鏃犳槑鏄捐鍥犲嚭鐜拌兏闂枫€佹皵淇冿紝娲诲姩鍚庢槑鏄撅紝浼戞伅鍚庡彲绋嶇紦瑙ｃ€?澶╁墠涓婅堪鐥囩姸鏄庢樉鍔犻噸锛屼即鍜冲椊銆佺矇绾㈣壊娉℃搏鏍风棸锛屽闂存棤娉曞钩鍗с€? },
-            { label: "鏃㈠線鍙?, value: "楂樿鍘嬬梾鍙?0骞达紝鏈€楂樻敹缂╁帇杈?80mmHg锛岃寰嬫湇鐢ㄩ檷鍘嬭嵂锛涙棤绯栧翱鐥呭強鍐犲績鐥呭彶銆? },
-            { label: "浣撴牸妫€鏌?, value: "浣撴俯 36.8鈩冿紝鑴夋悘 102娆?鍒嗭紝鍛煎惛 24娆?鍒嗭紝琛€鍘?156/92 mmHg銆傚弻鑲哄簳鍙椈鍙婃箍鎬у暟闊炽€? },
-            { label: "璇婃柇鎰忚", value: "1. 鎱㈡€у績鍔涜“绔€ユ€у姞閲嶏紱 2. 楂樿鍘嬬梾3绾э紙鏋侀珮鍗憋級銆? }
+            { label: "主诉", value: "反复胸闷、气促2周，加重2天，伴夜间阵发性呼吸困难。" },
+            { label: "现病史", value: "患者于2周前无明显诱因出现胸闷、气促，活动后明显，休息后可稍缓解。2天前上述症状明显加重，伴咳嗽、粉红色泡沫样痰，夜间无法平卧。" },
+            { label: "既往史", value: "高血压病史10年，最高收缩压达180mmHg，规律服用降压药；无糖尿病及冠心病史。" },
+            { label: "体格检查", value: "体温 36.8℃，脉搏 102次/分，呼吸 24次/分，血压 156/92 mmHg。双肺底可闻及湿性啰音。" },
+            { label: "诊断意见", value: "1. 慢性心力衰竭急性加重； 2. 高血压病3级（极高危）。" }
           ],
-          doctor: "鈻犫枲鈻?(宸查伄钄?"
+          doctor: "■■■ (已遮蔽)"
         };
 
         const mockOrderDoc = {
-          hospital: "涓婃捣浜ら€氬ぇ瀛﹀尰瀛﹂櫌闄勫睘鐟為噾鍖婚櫌",
-          title: "涓村簥闂ㄨ瘖澶勬柟绗?(瑗胯嵂鎴?",
-          name: "鈻犫枲鈻犫枲 (宸查伄钄?",
-          gender: "濂?,
-          age: "62宀?,
-          id: "鈻犫枲鈻犫枲鈻犫枲鈻犫枲 (宸查伄钄?",
+          hospital: "上海交通大学医学院附属瑞金医院",
+          title: "临床门诊处方笺 (西药房)",
+          name: "■■■■ (已遮蔽)",
+          gender: "女",
+          age: "62岁",
+          id: "■■■■■■■■ (已遮蔽)",
           date: "2026-07-14",
-          dept: "绁炵粡鍐呯",
+          dept: "神经内科",
           orders: [
-            { name: "1. 鐩愰吀澶氬鍝岄綈鐗?(Donepezil Hydrochloride Tablets)", spec: "5mg * 14鐗?/鐩?, usage: "Sig: 涓€娆?鐗囷紝涓€鏃?娆★紝鐫″墠鍙ｆ湇 (鏀瑰杽璁ょ煡鍔熻兘)" },
-            { name: "2. 鑳炵７鑳嗙⒈閽犺兌鍥?(Citicoline Sodium Capsules)", spec: "0.1g * 24绮?/鐩?, usage: "Sig: 涓€娆?绮掞紝涓€鏃?娆★紝鍙ｆ湇 (钀ュ吇鑴戠缁?" },
-            { name: "3. 閾舵潖鍙舵彁鍙栫墿鐗?(Ginkgo Biloba Extract Tablets)", spec: "40mg * 30鐗?/鐩?, usage: "Sig: 涓€娆?鐗囷紝涓€鏃?娆★紝楗悗鍙ｆ湇 (淇冭繘鑴戦儴寰幆)" }
+            { name: "1. 盐酸多奈哌齐片 (Donepezil Hydrochloride Tablets)", spec: "5mg * 14片 /盒", usage: "Sig: 一次1片，一日1次，睡前口服 (改善认知功能)" },
+            { name: "2. 胞磷胆碱钠胶囊 (Citicoline Sodium Capsules)", spec: "0.1g * 24粒 /盒", usage: "Sig: 一次2粒，一日3次，口服 (营养脑神经)" },
+            { name: "3. 银杏叶提取物片 (Ginkgo Biloba Extract Tablets)", spec: "40mg * 30片 /盒", usage: "Sig: 一次1片，一日3次，饭后口服 (促进脑部循环)" }
           ],
-          totalPrice: "锟?58.40",
-          doctor: "鈻犫枲鈻?(宸查伄钄?"
+          totalPrice: "￥258.40",
+          doctor: "■■■ (已遮蔽)"
         };
 
         let fields: any[] = [];
-        if (viewingRuleRow.modality === "CSV鏂囨湰鏁版嵁" || viewingRuleRow.modality === "CSV") {
-          if (viewingRuleRow.category === "浣忛櫌淇℃伅") {
+        if (viewingRuleRow.modality === "CSV文本数据" || viewingRuleRow.modality === "CSV") {
+          if (viewingRuleRow.category === "住院信息") {
             fields = [
               {
-                name: "鎮ｈ€呯紪鍙?,
+                name: "患者编号",
                 fieldName: "patientId",
                 fieldType: "text",
-                attr: "鐩存帴鏍囪瘑绗?,
-                tech: "鍋囧悕鍖?鍏ㄥ眬)",
-                param: "鏈」鐩笅鍚屼竴涓偅鑰呯殑澶氭ā鎬佹暟鎹伒寰悓涓€涓嶅彲閫嗗姞瀵嗚鍒?,
-                desc: "閲囩敤涓嶅彲閫嗗姞瀵嗙畻娉曪紝鐢熸垚16浣嶅搱甯屽€?,
+                attr: "直接标识符",
+                tech: "假名化(全局)",
+                param: "本项目下同一个患者的多模态数据遵循同一不可逆加密规则",
+                desc: "采用不可逆加密算法，生成16位哈希值",
                 canStat: false,
-                isKCalculated: "鍚?,
+                isKCalculated: "否",
                 splitField: ""
               },
               {
-                name: "鎮ｈ€呭鍚?,
+                name: "患者姓名",
                 fieldName: "name",
                 fieldType: "text",
-                attr: "鐩存帴鏍囪瘑绗?,
-                tech: "灞炴€у垹闄?,
-                param: "缃┖",
-                desc: "缃┖",
+                attr: "直接标识符",
+                tech: "属性删除",
+                param: "置空",
+                desc: "置空",
                 canStat: false,
-                isKCalculated: "鍚?,
-                splitField: "鎮ｈ€呭鍚?
+                isKCalculated: "否",
+                splitField: "患者姓名"
               },
               {
-                name: "鎬у埆",
+                name: "性别",
                 fieldName: "gender",
                 fieldType: "text",
-                attr: "鍑嗘爣璇嗙",
-                tech: "淇濈暀鍘熷€?,
+                attr: "准标识符",
+                tech: "保留原值",
                 param: "-",
-                desc: "涓嶆秹鍙婃晱鎰熼殣绉侊紝鐩存帴淇濈暀鍘熸枃銆?,
+                desc: "不涉及敏感隐私，直接保留原文。",
                 canStat: true,
-                isKCalculated: "鍚?,
-                splitField: "鎬у埆"
+                isKCalculated: "否",
+                splitField: "性别"
               },
               {
-                name: "灏辫瘖骞撮緞",
+                name: "就诊年龄",
                 fieldName: "age",
                 fieldType: "num",
-                attr: "鍑嗘爣璇嗙",
-                tech: "娉涘寲",
-                param: "宸查厤缃?3 涓槧灏?,
-                desc: "闈掑勾锛?8-29锛屼腑骞达細30-59锛岃€佸勾锛?0-100 2銆?0宀佸強浠ヤ笂",
+                attr: "准标识符",
+                tech: "泛化",
+                param: "已配置 3 个映射",
+                desc: "青年：18-29，中年：30-59，老年：60-100 2、80岁及以上",
                 canStat: true,
-                isKCalculated: "鏄?,
-                splitField: "灏辫瘖骞撮緞",
+                isKCalculated: "是",
+                splitField: "就诊年龄",
                 isAgeMapping: true
               },
               {
-                name: "灏辫瘖鏃ユ湡",
+                name: "就诊日期",
                 fieldName: "admissionDate",
                 fieldType: "date",
-                attr: "鍑嗘爣璇嗙",
-                tech: "鎵板姩(鍏ㄥ眬)",
-                param: "鏈」鐩笅鍚屼竴涓偅鑰呯殑澶氭ā鎬佹暟鎹伒寰悓涓€瑙勫垯锛屾壈鍔ㄥ弬鏁?14 ~ 14澶?,
-                desc: "XXXX骞碭X鏈圶X鏃ワ紝鏃跺垎绉掍笉淇濈暀锛屽悜鍓?鍚庡亸绉荤壒瀹氬ぉ鏁帮紝淇濇寔鍚屼竴鎮ｈ€呯殑鎵€鏈夋棩鏈熺被瀛楁鍋忕Щ閲忎竴鑷达紝涓嶅悓鎮ｈ€呯殑鍋忕Щ閲忎笉涓€鑷?,
+                attr: "准标识符",
+                tech: "扰动(全局)",
+                param: "本项目下同一个患者的多模态数据遵循同一规则，扰动参数-14 ~ 14天",
+                desc: "XXXX年XX月XX日，时分秒不保留，向前/后偏移特定天数，保持同一患者的所有日期类字段偏移量一致，不同患者的偏移量不一致",
                 canStat: false,
-                isKCalculated: "鍚?,
+                isKCalculated: "否",
                 splitField: ""
               }
             ];
-          } else if (viewingRuleRow.category === "妫€鏌ヤ俊鎭?) {
+          } else if (viewingRuleRow.category === "检查信息") {
             fields = [
               {
-                name: "鎮ｈ€呯紪鍙?,
+                name: "患者编号",
                 fieldName: "patientId",
                 fieldType: "text",
-                attr: "鐩存帴鏍囪瘑绗?,
-                tech: "鍋囧悕鍖?鍏ㄥ眬)",
-                param: "鏈」鐩笅鍚屼竴涓偅鑰呯殑澶氭ā鎬佹暟鎹伒寰悓涓€涓嶅彲閫嗗姞瀵嗚鍒?,
-                desc: "閲囩敤涓嶅彲閫嗗姞瀵嗙畻娉曪紝鐢熸垚16浣嶅搱甯屽€硷紱涓庘€滀綇闄俊鎭€濅腑鐨勬偅鑰呯紪鍙蜂繚鎸佷竴鑷?,
+                attr: "直接标识符",
+                tech: "假名化(全局)",
+                param: "本项目下同一个患者的多模态数据遵循同一不可逆加密规则",
+                desc: "采用不可逆加密算法，生成16位哈希值；与“住院信息”中的患者编号保持一致",
                 canStat: false,
-                isKCalculated: "鍚?,
+                isKCalculated: "否",
                 splitField: ""
               },
               {
-                name: "妫€鏌ュ悕绉?,
+                name: "检查名称",
                 fieldName: "checkName",
                 fieldType: "text",
-                attr: "鏁忔劅灞炴€?,
-                tech: "淇濈暀鍘熷€?,
+                attr: "敏感属性",
+                tech: "保留原值",
                 param: "-",
-                desc: "渚嬪 涓婅吂閮ㄧ鍏辨尟澧炲己鎴愬儚",
+                desc: "例如 上腹部磁共振增强成像",
                 canStat: false,
-                isKCalculated: "鍚?,
+                isKCalculated: "否",
                 splitField: ""
               },
               {
-                name: "妫€鏌ユ椂闂?,
+                name: "检查时间",
                 fieldName: "checkTime",
                 fieldType: "date",
-                attr: "鍑嗘爣璇嗙",
-                tech: "鎵板姩(鍏ㄥ眬)",
-                param: "鏈」鐩笅鍚屼竴涓偅鑰呯殑澶氭ā鎬佹暟鎹伒寰悓涓€瑙勫垯锛屾壈鍔ㄥ弬鏁?14 ~ 14澶?,
-                desc: "XXXX骞碭X鏈圶X鏃ワ紝鏃跺垎绉掍笉淇濈暀锛屽悜鍓?鍚庡亸绉荤壒瀹氬ぉ鏁帮紝淇濇寔鍚屼竴鎮ｈ€呯殑鎵€鏈夋棩鏈熺被瀛楁鍋忕Щ閲忎竴鑷达紝涓嶅悓鎮ｈ€呯殑鍋忕Щ閲忎笉涓€鑷?,
+                attr: "准标识符",
+                tech: "扰动(全局)",
+                param: "本项目下同一个患者的多模态数据遵循同一规则，扰动参数-14 ~ 14天",
+                desc: "XXXX年XX月XX日，时分秒不保留，向前/后偏移特定天数，保持同一患者的所有日期类字段偏移量一致，不同患者的偏移量不一致",
                 canStat: false,
-                isKCalculated: "鍚?,
+                isKCalculated: "否",
                 splitField: ""
               }
             ];
           } else {
-            // 妫€楠屼俊鎭?            fields = [
+            // 检验信息
+            fields = [
               {
-                name: "鎮ｈ€呯紪鍙?,
+                name: "患者编号",
                 fieldName: "patientId",
                 fieldType: "text",
-                attr: "鐩存帴鏍囪瘑绗?,
-                tech: "鍋囧悕鍖?鍏ㄥ眬)",
-                param: "鏈」鐩笅鍚屼竴涓偅鑰呯殑澶氭ā鎬佹暟鎹伒寰悓涓€涓嶅彲閫嗗姞瀵嗚鍒?,
-                desc: "閲囩敤涓嶅彲閫嗗姞瀵嗙畻娉曪紝鐢熸垚16浣嶅搱甯屽€硷紱涓庘€滀綇闄俊鎭€濅腑鐨勬偅鑰呯紪鍙蜂繚鎸佷竴鑷?,
+                attr: "直接标识符",
+                tech: "假名化(全局)",
+                param: "本项目下同一个患者的多模态数据遵循同一不可逆加密规则",
+                desc: "采用不可逆加密算法，生成16位哈希值；与“住院信息”中的患者编号保持一致",
                 canStat: false,
-                isKCalculated: "鍚?,
+                isKCalculated: "否",
                 splitField: ""
               },
               {
-                name: "妫€楠屽悕绉?,
+                name: "检验名称",
                 fieldName: "testName",
                 fieldType: "text",
-                attr: "鏁忔劅灞炴€?,
-                tech: "淇濈暀鍘熷€?,
+                attr: "敏感属性",
+                tech: "保留原值",
                 param: "-",
-                desc: "渚嬪 鑲濆姛鑳?,
+                desc: "例如 肝功能",
                 canStat: false,
-                isKCalculated: "鍚?,
+                isKCalculated: "否",
                 splitField: ""
               },
               {
-                name: "妫€楠屾椂闂?,
+                name: "检验时间",
                 fieldName: "testTime",
                 fieldType: "date",
-                attr: "鍑嗘爣璇嗙",
-                tech: "鎵板姩(鍏ㄥ眬)",
-                param: "鏈」鐩笅鍚屼竴涓偅鑰呯殑澶氭ā鎬佹暟鎹伒寰悓涓€瑙勫垯锛屾壈鍔ㄥ弬鏁?14 ~ 14澶?,
-                desc: "XXXX骞碭X鏈圶X鏃ワ紝鏃跺垎绉掍笉淇濈暀锛屽悜鍓?鍚庡亸绉荤壒瀹氬ぉ鏁帮紝淇濇寔鍚屼竴鎮ｈ€呯殑鎵€鏈夋棩鏈熺被瀛楁鍋忕Щ閲忎竴鑷达紝涓嶅悓鎮ｈ€呯殑鍋忕Щ閲忎笉涓€鑷?,
+                attr: "准标识符",
+                tech: "扰动(全局)",
+                param: "本项目下同一个患者的多模态数据遵循同一规则，扰动参数-14 ~ 14天",
+                desc: "XXXX年XX月XX日，时分秒不保留，向前/后偏移特定天数，保持同一患者的所有日期类字段偏移量一致，不同患者的偏移量不一致",
                 canStat: false,
-                isKCalculated: "鍚?,
+                isKCalculated: "否",
                 splitField: ""
               }
             ];
           }
-        } else if (viewingRuleRow.modality === "DICOM褰卞儚鏁版嵁" || viewingRuleRow.modality === "DICOM") {
+        } else if (viewingRuleRow.modality === "DICOM影像数据" || viewingRuleRow.modality === "DICOM") {
           fields = [
             {
               tag: "(0008,0008)",
               name: "ImageType",
-              attr: "鏁忔劅灞炴€?,
-              tech: "淇濈暀鍘熷€?,
+              attr: "敏感属性",
+              tech: "保留原值",
               param: "-",
-              desc: "鏆傛棤璇存槑",
-              isKCalculated: "鍚?,
+              desc: "暂无说明",
+              isKCalculated: "否",
               canStat: false,
               fieldName: "imageType",
               fieldType: "text"
@@ -1943,11 +1953,11 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             {
               tag: "(0010,0020)",
               name: "Patient ID",
-              attr: "鐩存帴鏍囪瘑绗?,
-              tech: "鍋囧悕鍖?鍏ㄥ眬)",
-              param: "鏈」鐩笅鍚屼竴涓偅鑰呯殑澶氭ā鎬佹暟鎹伒寰悓涓€涓嶅彲閫嗗姞瀵嗚鍒?,
-              desc: "閲囩敤涓嶅彲閫嗗姞瀵嗙畻娉曪紝鐢熸垚16浣嶅搱甯屽€硷紱涓庘€滀綇闄俊鎭€濅腑鐨勬偅鑰呮爣璇嗗彿淇濇寔涓€鑷?,
-              isKCalculated: "鍚?,
+              attr: "直接标识符",
+              tech: "假名化(全局)",
+              param: "本项目下同一个患者的多模态数据遵循同一不可逆加密规则",
+              desc: "采用不可逆加密算法，生成16位哈希值；与“住院信息”中的患者标识号保持一致",
+              isKCalculated: "否",
               canStat: false,
               fieldName: "patientId",
               fieldType: "text"
@@ -1955,11 +1965,11 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             {
               tag: "(0008,0030)",
               name: "PatientName",
-              attr: "鐩存帴鏍囪瘑绗?,
-              tech: "鍋囧悕鍖?,
-              param: "uid涓€鑷存€ф浛鎹?,
-              desc: "缁熶竴鏇存敼涓衡€淎NONYMIZED鈥?,
-              isKCalculated: "鍚?,
+              attr: "直接标识符",
+              tech: "假名化",
+              param: "uid一致性替换",
+              desc: "统一更改为“ANONYMIZED”",
+              isKCalculated: "否",
               canStat: false,
               fieldName: "patientName",
               fieldType: "text"
@@ -1967,11 +1977,11 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             {
               tag: "(0008,0020)",
               name: "StudyDate",
-              attr: "鍑嗘爣璇嗙",
-              tech: "鎵板姩(鍏ㄥ眬)",
-              param: "鏈」鐩笅鍚屼竴涓偅鑰呯殑澶氭ā鎬佹暟鎹伒寰悓涓€瑙勫垯锛屾壈鍔ㄥ弬鏁?14 ~ 14澶?,
-              desc: "XXXX骞碭X鏈圶X鏃ワ紝鏃跺垎绉掍笉淇濈暀锛屽悜鍓?鍚庡亸绉荤壒瀹氬ぉ鏁帮紝淇濇寔鍚屼竴鎮ｈ€呯殑鎵€鏈夋棩鏈熺被瀛楁鍋忕Щ閲忎竴鑷达紝涓嶅悓鎮ｈ€呯殑鍋忕Щ閲忎笉涓€鑷?,
-              isKCalculated: "鍚?,
+              attr: "准标识符",
+              tech: "扰动(全局)",
+              param: "本项目下同一个患者的多模态数据遵循同一规则，扰动参数-14 ~ 14天",
+              desc: "XXXX年XX月XX日，时分秒不保留，向前/后偏移特定天数，保持同一患者的所有日期类字段偏移量一致，不同患者的偏移量不一致",
+              isKCalculated: "否",
               canStat: true,
               fieldName: "studyDate",
               fieldType: "text",
@@ -1980,7 +1990,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
           ];
         }
 
-        const isStructured = viewingRuleRow.modality === "CSV鏂囨湰鏁版嵁" || viewingRuleRow.modality === "DICOM褰卞儚鏁版嵁" || viewingRuleRow.modality === "CSV" || viewingRuleRow.modality === "DICOM";
+        const isStructured = viewingRuleRow.modality === "CSV文本数据" || viewingRuleRow.modality === "DICOM影像数据" || viewingRuleRow.modality === "CSV" || viewingRuleRow.modality === "DICOM";
 
         return (
           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" id="view_rules_modal">
@@ -1990,7 +2000,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 <div className="flex items-center space-x-2.5">
                   <div>
                     <h3 className="font-black text-sm uppercase tracking-wider">
-                      鍖垮悕鍖栫瓥鐣?{viewingRuleRow.modality}{viewingRuleRow.category && viewingRuleRow.category !== '-' ? `-${viewingRuleRow.category}` : ''}
+                      匿名化策略-{viewingRuleRow.modality}{viewingRuleRow.category && viewingRuleRow.category !== '-' ? `-${viewingRuleRow.category}` : ''}
                     </h3>
                   </div>
                 </div>
@@ -2007,18 +2017,18 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 {isStructured ? (
                   <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50 animate-fade-in">
                     <table className="w-full text-left border-collapse text-xs">
-                      {viewingRuleRow.modality === "DICOM褰卞儚鏁版嵁" || viewingRuleRow.modality === "DICOM" ? (
+                      {viewingRuleRow.modality === "DICOM影像数据" || viewingRuleRow.modality === "DICOM" ? (
                         <>
                           <thead>
                             <tr className="bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-wider border-b border-slate-200">
                               <th className="py-3 px-4">TAG</th>
-                              <th className="py-3 px-4">鏁版嵁瀛楁</th>
-                              <th className="py-3 px-4 text-center">鏁版嵁灞炴€?/th>
-                              <th className="py-3 px-4">鍖垮悕鍖栨妧鏈?/th>
-                              <th className="py-3 px-4">鍙傛暟</th>
-                              <th className="py-3 px-4">璇存槑</th>
-                              <th className="py-3 px-4 text-center">鏄惁绾冲叆K鍊艰绠?/th>
-                              <th className="py-3 px-4 text-center">鎿嶄綔</th>
+                              <th className="py-3 px-4">数据字段</th>
+                              <th className="py-3 px-4 text-center">数据属性</th>
+                              <th className="py-3 px-4">匿名化技术</th>
+                              <th className="py-3 px-4">参数</th>
+                              <th className="py-3 px-4">说明</th>
+                              <th className="py-3 px-4 text-center">是否纳入K值计算</th>
+                              <th className="py-3 px-4 text-center">操作</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 font-normal text-slate-700 bg-white">
@@ -2029,39 +2039,39 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                                   {item.tag}
                                 </td>
 
-                                {/* 鏁版嵁瀛楁 */}
+                                {/* 数据字段 */}
                                 <td className="py-3.5 px-4 text-xs text-slate-700 text-left font-normal">
                                   {item.name}
                                 </td>
 
-                                {/* 鏁版嵁灞炴€?*/}
+                                {/* 数据属性 */}
                                 <td className="py-3.5 px-4 text-xs text-slate-700 text-center font-normal">
                                   {item.attr}
                                 </td>
 
-                                {/* 鍖垮悕鍖栫瓥鐣?/ 鍖垮悕鍖栨妧鏈?*/}
+                                {/* 匿名化策略 / 匿名化技术 */}
                                 <td className="py-3.5 px-4 text-xs text-slate-700 text-left font-normal">
                                   {item.tech}
                                 </td>
 
-                                {/* 鍙傛暟 */}
+                                {/* 参数 */}
                                 <td className="py-3.5 px-4 text-xs text-slate-700 text-left leading-relaxed font-normal">
                                   {item.param || "-"}
                                 </td>
 
-                                {/* 璇存槑 */}
+                                {/* 说明 */}
                                 <td className="py-3.5 px-4 text-xs text-slate-700 text-left leading-relaxed max-w-[200px] font-normal">
                                   {item.desc || "-"}
                                 </td>
 
-                                {/* 鏄惁绾冲叆K鍊艰绠?*/}
+                                {/* 是否纳入K值计算 */}
                                 <td className="py-3.5 px-4 text-center text-xs text-slate-700 font-normal">
-                                  {item.isKCalculated || "鍚?}
+                                  {item.isKCalculated || "否"}
                                 </td>
 
-                                {/* 鎿嶄綔 */}
+                                {/* 操作 */}
                                 <td className="py-3.5 px-4 text-center">
-                                  {item.isKCalculated === "鏄? ? (
+                                  {item.isKCalculated === "是" ? (
                                     <div className="flex justify-center">
                                       <button
                                         onClick={() => {
@@ -2070,7 +2080,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                                         }}
                                         className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] rounded shadow-2xs transition-colors cursor-pointer border-0 font-normal"
                                       >
-                                        <span>鏌ョ湅缁熻</span>
+                                        <span>查看统计</span>
                                       </button>
                                     </div>
                                   ) : (
@@ -2085,21 +2095,21 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                         <>
                           <thead>
                             <tr className="bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-wider border-b border-slate-200">
-                              <th className="py-3 px-4">鏁版嵁瀛楁</th>
-                              {viewingRuleRow.category === "浣忛櫌淇℃伅" && (
-                                <th className="py-3 px-4">鏁版嵁鏍囩</th>
+                              <th className="py-3 px-4">数据字段</th>
+                              {viewingRuleRow.category === "住院信息" && (
+                                <th className="py-3 px-4">数据标签</th>
                               )}
-                              <th className="py-3 px-4 text-center">鏁版嵁灞炴€?/th>
-                              <th className="py-3 px-4">鍖垮悕鍖栫瓥鐣?/th>
-                              <th className="py-3 px-4">鍙傛暟</th>
-                              <th className="py-3 px-4">璇存槑</th>
-                              <th className="py-3 px-4 text-center">鏄惁绾冲叆K鍊艰绠?/th>
-                              <th className="py-3 px-4 text-center">鎿嶄綔</th>
+                              <th className="py-3 px-4 text-center">数据属性</th>
+                              <th className="py-3 px-4">匿名化策略</th>
+                              <th className="py-3 px-4">参数</th>
+                              <th className="py-3 px-4">说明</th>
+                              <th className="py-3 px-4 text-center">是否纳入K值计算</th>
+                              <th className="py-3 px-4 text-center">操作</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 font-normal text-slate-700 bg-white">
                             {fields.map((item, idx) => {
-                              const isAdmission = viewingRuleRow.category === "浣忛櫌淇℃伅";
+                              const isAdmission = viewingRuleRow.category === "住院信息";
                               let shouldRenderFieldCell = true;
                               let fieldCellRowSpan = 1;
                               let fieldCellText = item.name;
@@ -2108,7 +2118,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                                 if (idx === 1) {
                                   shouldRenderFieldCell = true;
                                   fieldCellRowSpan = 3;
-                                  fieldCellText = "璁板綍鍐呭";
+                                  fieldCellText = "记录内容";
                                 } else if (idx === 2 || idx === 3) {
                                   shouldRenderFieldCell = false;
                                 }
@@ -2116,40 +2126,40 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
 
                               return (
                                 <tr key={idx} className="hover:bg-slate-50/20 font-normal">
-                                  {/* 鏁版嵁瀛楁 */}
+                                  {/* 数据字段 */}
                                   {shouldRenderFieldCell && (
                                     <td className="py-3.5 px-4 text-xs text-slate-700 text-left font-normal" rowSpan={fieldCellRowSpan}>
                                       {fieldCellText}
                                     </td>
                                   )}
 
-                                  {/* 鏁版嵁鏍囩 */}
+                                  {/* 数据标签 */}
                                   {isAdmission && (
                                     <td className="py-3.5 px-4 text-xs text-slate-700 text-left font-normal">
                                       {item.splitField || "-"}
                                     </td>
                                   )}
 
-                                  {/* 鏁版嵁灞炴€?*/}
+                                  {/* 数据属性 */}
                                   <td className="py-3.5 px-4 text-center text-xs text-slate-700 font-normal">
                                     {item.attr}
                                   </td>
 
-                                  {/* 鍖垮悕鍖栫瓥鐣?/ 鍖垮悕鍖栨妧鏈?*/}
+                                  {/* 匿名化策略 / 匿名化技术 */}
                                   <td className="py-3.5 px-4 text-xs text-slate-700 text-left font-normal">
                                     {item.tech}
                                   </td>
 
-                                  {/* 鍙傛暟 */}
+                                  {/* 参数 */}
                                   <td className="py-3.5 px-4 text-xs text-slate-700 text-left leading-relaxed font-normal">
                                     {item.isAgeMapping ? (
                                       <div className="flex items-center space-x-1.5 font-normal">
-                                        <span>宸查厤缃?3 涓槧灏?/span>
+                                        <span>已配置 3 个映射</span>
                                         <button 
                                           onClick={() => setShowReadOnlyMapping(true)}
                                           className="text-blue-600 hover:text-blue-800 underline font-normal cursor-pointer bg-transparent border-0 p-0 text-xs"
                                         >
-                                          鏌ョ湅
+                                          查看
                                         </button>
                                       </div>
                                     ) : (
@@ -2157,19 +2167,19 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                                     )}
                                   </td>
 
-                                  {/* 璇存槑 */}
+                                  {/* 说明 */}
                                   <td className="py-3.5 px-4 text-xs text-slate-700 text-left leading-relaxed max-w-[200px] font-normal">
                                     {item.desc || "-"}
                                   </td>
 
-                                  {/* 鏄惁绾冲叆K鍊艰绠?*/}
+                                  {/* 是否纳入K值计算 */}
                                   <td className="py-3.5 px-4 text-center text-xs text-slate-700 font-normal">
-                                    {item.isKCalculated || "鍚?}
+                                    {item.isKCalculated || "否"}
                                   </td>
 
-                                  {/* 鎿嶄綔 */}
+                                  {/* 操作 */}
                                   <td className="py-3.5 px-4 text-center">
-                                    {item.isKCalculated === "鏄? ? (
+                                    {item.isKCalculated === "是" ? (
                                       <div className="flex justify-center">
                                         <button
                                           onClick={() => {
@@ -2178,7 +2188,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                                           }}
                                           className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] rounded shadow-2xs transition-colors cursor-pointer border-0 font-normal"
                                         >
-                                          <span>鏌ョ湅缁熻</span>
+                                          <span>查看统计</span>
                                         </button>
                                       </div>
                                     ) : (
@@ -2195,7 +2205,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 ) : (
                   /* Image Masking View */
                   (() => {
-                    const doc = viewingRuleRow.category === "闂ㄨ瘖灏辫瘖璁板綍" ? mockRecordDoc : mockOrderDoc;
+                    const doc = viewingRuleRow.category === "门诊就诊记录" ? mockRecordDoc : mockOrderDoc;
                     return (
                       <div className="flex justify-center w-full">
                         {/* EHR Document layout simulating the redacted result */}
@@ -2215,11 +2225,11 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
 
                             {/* Metadata Grid */}
                             <div className="grid grid-cols-3 gap-2.5 text-[11px] border border-slate-200 p-3 rounded bg-slate-50/70 mb-4 font-bold">
-                              <div><span className="text-slate-400">鎮ｈ€呭鍚?</span> <span className="bg-slate-950 text-slate-950 select-none px-4 py-0.5 rounded ml-1 text-[9px] font-mono">鈻犫枲鈻?/span></div>
-                              <div><span className="text-slate-400">鎮ｈ€呮€у埆:</span> <span className="text-slate-900">{doc.gender}</span></div>
-                              <div><span className="text-slate-400">鎮ｈ€呭勾榫?</span> <span className="text-slate-900">{doc.age}</span></div>
-                              <div className="col-span-2"><span className="text-slate-400">娴佹按/鐥呭巻鍙?</span> <span className="bg-slate-950 text-slate-950 select-none px-8 py-0.5 rounded ml-1 text-[9px] font-mono">鈻犫枲鈻犫枲鈻犫枲鈻?/span></div>
-                              <div><span className="text-slate-400">灏辫瘖绉戝:</span> <span className="text-slate-900">{doc.dept}</span></div>
+                              <div><span className="text-slate-400">患者姓名:</span> <span className="bg-slate-950 text-slate-950 select-none px-4 py-0.5 rounded ml-1 text-[9px] font-mono">■■■</span></div>
+                              <div><span className="text-slate-400">患者性别:</span> <span className="text-slate-900">{doc.gender}</span></div>
+                              <div><span className="text-slate-400">患者年龄:</span> <span className="text-slate-900">{doc.age}</span></div>
+                              <div className="col-span-2"><span className="text-slate-400">流水/病历号:</span> <span className="bg-slate-950 text-slate-950 select-none px-8 py-0.5 rounded ml-1 text-[9px] font-mono">■■■■■■■</span></div>
+                              <div><span className="text-slate-400">就诊科室:</span> <span className="text-slate-900">{doc.dept}</span></div>
                             </div>
 
                             {/* Content Details */}
@@ -2234,13 +2244,13 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                               </div>
                             ) : (
                               <div className="space-y-3.5 text-xs">
-                                <h5 className="font-black text-slate-900 border-l-4 border-emerald-600 pl-2 text-[10px] uppercase tracking-wide">澶勬柟鍖诲槺椤圭洰鏄庣粏</h5>
+                                <h5 className="font-black text-slate-900 border-l-4 border-emerald-600 pl-2 text-[10px] uppercase tracking-wide">处方医嘱项目明细</h5>
                                 <div className="border border-slate-300 rounded overflow-hidden bg-white">
                                   <table className="w-full text-left border-collapse text-[10px]">
                                     <thead>
                                       <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-black">
-                                        <th className="p-2 w-2/3">鑽搧/璇婄枟椤圭洰鍚嶇О</th>
-                                        <th className="p-2 w-1/3">瑙勬牸/鐢ㄨ嵂鎸囧</th>
+                                        <th className="p-2 w-2/3">药品/诊疗项目名称</th>
+                                        <th className="p-2 w-1/3">规格/用药指导</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
@@ -2257,7 +2267,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                                   </table>
                                 </div>
                                 <div className="flex justify-end font-black text-xs text-slate-900 pr-1">
-                                  <span>鍖诲槺鎬昏垂鐢? <span className="text-red-600 font-mono text-xs ml-1">{(doc as any).totalPrice}</span></span>
+                                  <span>医嘱总费用: <span className="text-red-600 font-mono text-xs ml-1">{(doc as any).totalPrice}</span></span>
                                 </div>
                               </div>
                             )}
@@ -2265,12 +2275,12 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                             {/* Footer */}
                             <div className="border-t border-slate-200 pt-3 mt-5 flex items-center justify-between text-[11px]">
                               <div>
-                                <span className="text-slate-400 font-bold">璐ｄ换浜烘牳绛?</span>
-                                <span className="bg-slate-950 text-slate-950 select-none px-6 py-0.5 rounded ml-1.5 text-[9px] font-mono">鈻犫枲鈻?/span>
+                                <span className="text-slate-400 font-bold">责任人核签:</span>
+                                <span className="bg-slate-950 text-slate-950 select-none px-6 py-0.5 rounded ml-1.5 text-[9px] font-mono">■■■</span>
                               </div>
                               <div className="flex items-center space-x-2">
                                 <div className="relative w-11 h-11 rounded-full border border-red-500/25 flex items-center justify-center text-red-500/25 text-[8px] font-black uppercase rotate-12 select-none">
-                                  <span className="text-center leading-2">鑴辨晱瀹℃牳<br/>鐢靛瓙绛惧悕</span>
+                                  <span className="text-center leading-2">脱敏审核<br/>电子签名</span>
                                 </div>
                               </div>
                             </div>
@@ -2288,7 +2298,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                   onClick={() => setViewingRuleRow(null)}
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl cursor-pointer transition-colors border-0"
                 >
-                  鍏抽棴
+                  关闭
                 </button>
               </div>
             </div>
@@ -2296,52 +2306,52 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
         );
       })()}
 
-      {/* ================= NEW MODAL: DIMENSION STATISTICS (澶氱淮搴﹀幓鏍囪瘑鍖栨墽琛岀粺璁? ================= */}
+      {/* ================= NEW MODAL: DIMENSION STATISTICS (多维度去标识化执行统计) ================= */}
       {dimensionStatsModal && (() => {
         let rows: any[] = [];
-        if (dimensionStatsModal.modality === "DICOM褰卞儚鏁版嵁") {
+        if (dimensionStatsModal.modality === "DICOM影像数据") {
           rows = [
-            { dim: "鎮ｈ€?, total: "245", success: "240", failure: "5" },
-            { dim: "灏辫瘖", total: "450", success: "440", failure: "10" },
-            { dim: "鏂囦欢", total: "8,677", success: "8,627", failure: "50" }
+            { dim: "患者", total: "245", success: "240", failure: "5" },
+            { dim: "就诊", total: "450", success: "440", failure: "10" },
+            { dim: "文件", total: "8,677", success: "8,627", failure: "50" }
           ];
-        } else if (dimensionStatsModal.modality === "鍥剧墖鏁版嵁") {
-          if (dimensionStatsModal.category === "闂ㄨ瘖灏辫瘖璁板綍") {
+        } else if (dimensionStatsModal.modality === "图片数据") {
+          if (dimensionStatsModal.category === "门诊就诊记录") {
             rows = [
-              { dim: "鎮ｈ€?, total: "120", success: "115", failure: "5" },
-              { dim: "灏辫瘖", total: "180", success: "170", failure: "10" },
-              { dim: "鏂囦欢", total: "1,348", success: "1,325", failure: "23" }
+              { dim: "患者", total: "120", success: "115", failure: "5" },
+              { dim: "就诊", total: "180", success: "170", failure: "10" },
+              { dim: "文件", total: "1,348", success: "1,325", failure: "23" }
             ];
           } else {
             rows = [
-              { dim: "鎮ｈ€?, total: "210", success: "210", failure: "0" },
-              { dim: "灏辫瘖", total: "350", success: "350", failure: "0" },
-              { dim: "鏂囦欢", total: "2,348", success: "2,348", failure: "0" }
+              { dim: "患者", total: "210", success: "210", failure: "0" },
+              { dim: "就诊", total: "350", success: "350", failure: "0" },
+              { dim: "文件", total: "2,348", success: "2,348", failure: "0" }
             ];
           }
-        } else if (dimensionStatsModal.modality === "CSV鏂囨湰鏁版嵁" || dimensionStatsModal.modality === "CSV") {
-          if (dimensionStatsModal.category === "浣忛櫌淇℃伅") {
+        } else if (dimensionStatsModal.modality === "CSV文本数据" || dimensionStatsModal.modality === "CSV") {
+          if (dimensionStatsModal.category === "住院信息") {
             rows = [
-              { dim: "鎮ｈ€?, total: "800", success: "780", failure: "20" },
-              { dim: "灏辫瘖", total: "1,200", success: "1,180", failure: "20" },
-              { dim: "璁板綍", total: "5,400", success: "5,350", failure: "50" }
+              { dim: "患者", total: "800", success: "780", failure: "20" },
+              { dim: "就诊", total: "1,200", success: "1,180", failure: "20" },
+              { dim: "记录", total: "5,400", success: "5,350", failure: "50" }
             ];
-          } else if (dimensionStatsModal.category === "妫€鏌ヤ俊鎭?) {
+          } else if (dimensionStatsModal.category === "检查信息") {
             rows = [
-              { dim: "鎮ｈ€?, total: "600", success: "590", failure: "10" },
-              { dim: "灏辫瘖", total: "900", success: "885", failure: "15" },
-              { dim: "璁板綍", total: "3,200", success: "3,180", failure: "20" }
+              { dim: "患者", total: "600", success: "590", failure: "10" },
+              { dim: "就诊", total: "900", success: "885", failure: "15" },
+              { dim: "记录", total: "3,200", success: "3,180", failure: "20" }
             ];
           } else {
             rows = [
-              { dim: "鎮ｈ€?, total: "750", success: "740", failure: "10" },
-              { dim: "灏辫瘖", total: "1,100", success: "1,090", failure: "10" },
-              { dim: "璁板綍", total: "4,800", success: "4,750", failure: "50" }
+              { dim: "患者", total: "750", success: "740", failure: "10" },
+              { dim: "就诊", total: "1,100", success: "1,090", failure: "10" },
+              { dim: "记录", total: "4,800", success: "4,750", failure: "50" }
             ];
           }
         }
 
-        const isMediaStats = dimensionStatsModal.modality === "DICOM褰卞儚鏁版嵁" || dimensionStatsModal.modality === "鍥剧墖鏁版嵁";
+        const isMediaStats = dimensionStatsModal.modality === "DICOM影像数据" || dimensionStatsModal.modality === "图片数据";
 
         return (
           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" id="dimension_stats_modal">
@@ -2351,7 +2361,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 <div className="flex items-center space-x-2">
                   <BarChart2 className="w-5 h-5 text-blue-400" />
                   <h3 className="font-black text-sm uppercase tracking-wider">
-                    {isMediaStats ? `${dimensionStatsModal.modality}-${dimensionStatsModal.category}` : "澶氱淮搴﹀幓鏍囪瘑鍖栨墽琛岀粺璁?}
+                    {isMediaStats ? `${dimensionStatsModal.modality}-${dimensionStatsModal.category}` : "多维度去标识化执行统计"}
                   </h3>
                 </div>
                 <button 
@@ -2366,7 +2376,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
               <div className="p-6 space-y-4 text-left">
                 {!isMediaStats && (
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <span className="text-xs font-black text-slate-500 uppercase tracking-widest block">褰撳墠鍒嗙被鎯呭喌</span>
+                    <span className="text-xs font-black text-slate-500 uppercase tracking-widest block">当前分类情况</span>
                     <span className="text-xs font-black text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded">
                       {dimensionStatsModal.modality} &middot; {dimensionStatsModal.category}
                     </span>
@@ -2377,10 +2387,10 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-wider border-b border-slate-200">
-                        <th className="py-3 px-5">缁熻缁村害</th>
-                        <th className="py-3 px-4 text-center">鎬绘暟</th>
-                        <th className="py-3 px-4 text-center">鎴愬姛鏁?/th>
-                        <th className="py-3 px-4 text-center">澶辫触鏁?/th>
+                        <th className="py-3 px-5">统计维度</th>
+                        <th className="py-3 px-4 text-center">总数</th>
+                        {!isMediaStats && <th className="py-3 px-4 text-center">成功数</th>}
+                        {!isMediaStats && <th className="py-3 px-4 text-center">失败数</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-bold text-slate-700">
@@ -2388,10 +2398,12 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                         <tr key={idx} className="hover:bg-slate-50/50">
                           <td className="py-3.5 px-5 text-slate-900 font-black">{row.dim}</td>
                           <td className="py-3.5 px-4 text-center font-mono text-slate-600">{row.total}</td>
-                          <td className="py-3.5 px-4 text-center font-mono text-emerald-600">{row.success}</td>
-                          <td className={`py-3.5 px-4 text-center font-mono ${parseInt(row.failure) > 0 ? "text-rose-600 font-black" : "text-slate-400"}`}>
-                            {row.failure}
-                          </td>
+                          {!isMediaStats && <td className="py-3.5 px-4 text-center font-mono text-emerald-600">{row.success}</td>}
+                          {!isMediaStats && (
+                            <td className={`py-3.5 px-4 text-center font-mono ${parseInt(row.failure) > 0 ? "text-rose-600 font-black" : "text-slate-400"}`}>
+                              {row.failure}
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -2405,7 +2417,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                   onClick={() => setDimensionStatsModal(null)}
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl cursor-pointer transition-colors border-0"
                 >
-                  鍏抽棴
+                  关闭
                 </button>
               </div>
             </div>
@@ -2413,7 +2425,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
         );
       })()}
 
-      {/* ================= NEW MODAL: FAILURE DETAILS (鍘绘爣璇嗕换鍔″け璐ヨ鎯呮姤鍛? ================= */}
+      {/* ================= NEW MODAL: FAILURE DETAILS (去标识任务失败详情报告) ================= */}
       {failureDetailsModal && (() => {
         let reasons: any[] = [];
         let errorsForReason: { [reasonIndex: number]: string[] } = {};
@@ -2421,10 +2433,10 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
         const modality = failureDetailsModal.modality;
         const category = failureDetailsModal.category;
 
-        if (modality === "DICOM褰卞儚鏁版嵁") {
+        if (modality === "DICOM影像数据") {
           reasons = [
-            { text: "鍥惧儚鍐呮枃瀛楃儳褰曞尯鍩烵CR涓庤劚鏁忚秴鏃?, count: "35", pct: 70 },
-            { text: "鍥惧儚鍒囩墖鍏冩暟鎹?Metadata)鎹熷潖鏃犳硶閲嶅啓", count: "15", pct: 30 }
+            { text: "图像内文字烧录区域OCR与脱敏超时", count: "35", pct: 70 },
+            { text: "图像切片元数据(Metadata)损坏无法重写", count: "15", pct: 30 }
           ];
           errorsForReason = {
             0: [
@@ -2436,10 +2448,10 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
               "DCM_ERR_META_06", "DCM_ERR_META_07", "DCM_ERR_META_08", "DCM_ERR_META_09", "DCM_ERR_META_10"
             ]
           };
-        } else if (modality === "鍥剧墖鏁版嵁") {
+        } else if (modality === "图片数据") {
           reasons = [
-            { text: "鎵嬪啓鏁忔劅浣撳緛鍖哄煙鑷姩瀹氫綅澶辫触", count: "15", pct: 65 },
-            { text: "绾稿紶鎵弿鍙嶅厜/閲嶅害鐣稿彉瀵艰嚧OCR閲嶈瘯瓒呴檺", count: "8", pct: 35 }
+            { text: "手写敏感体征区域自动定位失败", count: "15", pct: 65 },
+            { text: "纸张扫描反光/重度畸变导致OCR重试超限", count: "8", pct: 35 }
           ];
           errorsForReason = {
             0: [
@@ -2451,11 +2463,11 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
               "IMG_ERR_REFLECT_06", "IMG_ERR_REFLECT_07", "IMG_ERR_REFLECT_08", "IMG_ERR_REFLECT_09", "IMG_ERR_REFLECT_10"
             ]
           };
-        } else { // CSV鏂囨湰鏁版嵁 / CSV
-          if (category === "浣忛櫌淇℃伅") {
+        } else { // CSV文本数据 / CSV
+          if (category === "住院信息") {
             reasons = [
-              { text: "瀛楁鏍煎紡鏍￠獙澶辫触 (韬唤璇侀潪鏍囧噯18浣?", count: "8", pct: 67 },
-              { text: "浣忛櫌鍙?灏辫瘖鍗″彿瀛樺湪鏈煡涔辩爜瀛楃", count: "4", pct: 33 }
+              { text: "字段格式校验失败 (身份证非标准18位)", count: "8", pct: 67 },
+              { text: "住院号/就诊卡号存在未知乱码字符", count: "4", pct: 33 }
             ];
             errorsForReason = {
               0: [
@@ -2467,10 +2479,10 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 "ROW_424_COL_3", "ROW_511_COL_3", "ROW_672_COL_3", "ROW_743_COL_3", "ROW_890_COL_3"
               ]
             };
-          } else if (category === "妫€鏌ヤ俊鎭?) {
+          } else if (category === "检查信息") {
             reasons = [
-              { text: "妫€鏌ョ敵璇峰崟鍙峰寘鍚笉鍙В鏋愭牸寮?, count: "10", pct: 50 },
-              { text: "妫€鏌ユ椂闂存牸寮忛潪鏍囧噯(鏃犳硶鑷姩瀵归綈鍒板勾)", count: "10", pct: 50 }
+              { text: "检查申请单号包含不可解析格式", count: "10", pct: 50 },
+              { text: "检查时间格式非标准(无法自动对齐到年)", count: "10", pct: 50 }
             ];
             errorsForReason = {
               0: [
@@ -2482,9 +2494,10 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 "ROW_501_COL_4", "ROW_615_COL_4", "ROW_722_COL_4", "ROW_834_COL_4", "ROW_945_COL_4"
               ]
             };
-          } else { // 妫€楠屼俊鎭?            reasons = [
-              { text: "妫€楠岀瀹ゅ強妫€楠岄」鐩紪鐮佹湭鍖归厤瀛楀吀", count: "12", pct: 60 },
-              { text: "妫€楠屾暟鍊煎紓甯稿寘鍚閲嶈繍绠楃鎴栨孩鍑哄瓧绗?, count: "8", pct: 40 }
+          } else { // 检验信息
+            reasons = [
+              { text: "检验科室及检验项目编码未匹配字典", count: "12", pct: 60 },
+              { text: "检验数值异常包含多重运算符或溢出字符", count: "8", pct: 40 }
             ];
             errorsForReason = {
               0: [
@@ -2506,7 +2519,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             <div className="bg-white rounded-2xl shadow-xl border border-slate-300 max-w-4xl w-full overflow-hidden animate-scale-up flex flex-col max-h-[90vh]">
               {/* Header */}
               <div className="bg-slate-900 text-white px-6 py-4.5 flex items-center justify-between shrink-0">
-                <h3 className="font-black text-sm uppercase tracking-wider">澶辫触璇︽儏</h3>
+                <h3 className="font-black text-sm uppercase tracking-wider">失败详情</h3>
                 <button 
                   onClick={() => setFailureDetailsModal(null)}
                   className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-all bg-transparent border-0 cursor-pointer"
@@ -2520,25 +2533,25 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 {/* Meta info bar */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs font-bold text-slate-700 shadow-2xs">
                   <div>
-                    <span className="text-slate-400 font-medium block mb-1">鏁版嵁妯℃€?/span>
+                    <span className="text-slate-400 font-medium block mb-1">数据模态</span>
                     <span className="text-slate-900 font-black text-sm">{failureDetailsModal.modality}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-medium block mb-1">鍒嗙被</span>
+                    <span className="text-slate-400 font-medium block mb-1">分类</span>
                     <span className="text-slate-900 font-black text-sm">{failureDetailsModal.category}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-medium block mb-1">澶辫触鏁?/span>
+                    <span className="text-slate-400 font-medium block mb-1">失败数</span>
                     <span className="text-rose-600 font-black text-sm">{failureDetailsModal.failure}</span>
                   </div>
                 </div>
 
                 {/* Left and Right splits */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  {/* Left panel: 澶辫触鍘熷洜鍒嗗竷 */}
+                  {/* Left panel: 失败原因分布 */}
                   <div className="space-y-3">
                     <span className="text-xs font-black text-slate-800 uppercase tracking-widest block border-l-4 border-rose-500 pl-2">
-                      澶辫触鍘熷洜鍒嗗竷
+                      失败原因分布
                     </span>
                     <div className="space-y-3">
                       {reasons.map((item, idx) => {
@@ -2571,10 +2584,10 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                     </div>
                   </div>
 
-                  {/* Right panel: 闂鏁版嵁鍞竴鏍囪瘑 */}
+                  {/* Right panel: 问题数据唯一标识 */}
                   <div className="space-y-3">
                     <span className="text-xs font-black text-slate-800 uppercase tracking-widest block border-l-4 border-rose-500 pl-2">
-                      闂鏁版嵁鍞竴鏍囪瘑
+                      问题数据唯一标识
                     </span>
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-h-[350px] overflow-y-auto">
                       <ul className="space-y-1.5 divide-y divide-slate-200/40 font-bold">
@@ -2596,7 +2609,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                   onClick={() => setFailureDetailsModal(null)}
                   className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl cursor-pointer transition-colors border-0 shadow-2xs"
                 >
-                  鍏抽棴
+                  关闭
                 </button>
               </div>
             </div>
@@ -2612,7 +2625,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="w-5 h-5 text-amber-500 animate-pulse" />
-                <h3 className="font-black text-sm uppercase tracking-wider">纭澶辫触閲嶈窇</h3>
+                <h3 className="font-black text-sm uppercase tracking-wider">确认失败重跑</h3>
               </div>
               <button 
                 onClick={() => setRerunConfirmTask(null)}
@@ -2625,9 +2638,11 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             {/* Body */}
             <div className="p-6 space-y-4">
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-xs font-bold text-amber-800">
-                鎮ㄥ嵆灏嗛噸鏂版墽琛屼换鍔?<span className="font-black text-slate-900 font-mono">[{rerunConfirmTask.id}] {rerunConfirmTask.name}</span>銆?              </div>
+                您即将重新执行任务 <span className="font-black text-slate-900 font-mono">[{rerunConfirmTask.id}] {rerunConfirmTask.name}</span>。
+              </div>
               <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                閲嶈窇鎿嶄綔灏嗘竻闄ゅ師浠诲姟涓嬬殑閿欒璁℃暟锛屽苟閽堝澶辫触鐨?<span className="font-mono font-bold text-red-600">{rerunConfirmTask.failure}</span> 涓幓鏍囪瘑鍖栨枃浠跺惎鍔ㄩ噸鏂版墽琛岄€昏緫銆傛鎿嶄綔涓嶅彲閫嗭紝鏄惁缁х画锛?              </p>
+                重跑操作将清除原任务下的错误计数，并针对失败的 <span className="font-mono font-bold text-red-600">{rerunConfirmTask.failure}</span> 个去标识化文件启动重新执行逻辑。此操作不可逆，是否继续？
+              </p>
             </div>
 
             {/* Footer */}
@@ -2636,13 +2651,14 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 onClick={() => setRerunConfirmTask(null)}
                 className="px-5 py-2.5 rounded border border-slate-200 text-xs font-black text-slate-600 hover:bg-slate-50 uppercase tracking-wider transition-colors bg-white cursor-pointer"
               >
-                鍙栨秷
+                取消
               </button>
               <button 
                 onClick={() => handleRerunTask(rerunConfirmTask.id)}
                 className="px-6 py-2.5 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-amber-100 transition-colors border-0 cursor-pointer"
               >
-                寮€濮嬮噸璺?              </button>
+                开始重跑
+              </button>
             </div>
           </div>
         </div>
@@ -2659,9 +2675,9 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                   <Settings2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-sm uppercase tracking-wider">鏄犲皠閰嶇疆-灏辫瘖骞撮緞</h3>
+                  <h3 className="font-black text-sm uppercase tracking-wider">映射配置-就诊年龄</h3>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
-                    瀛楁: age &middot; 鏌ョ湅妯″紡 (鍙)
+                    字段: age &middot; 查看模式 (只读)
                   </p>
                 </div>
               </div>
@@ -2677,7 +2693,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             <div className="p-6 space-y-6 text-left overflow-y-auto flex-1">
               {/* Mapping Type Option */}
               <div className="space-y-1.5 border-b border-slate-100 pb-4">
-                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">鏄犲皠鏂瑰紡</label>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">映射方式</label>
                 <div className="flex space-x-4">
                   <label className="flex items-center space-x-2 cursor-not-allowed opacity-90">
                     <input 
@@ -2686,7 +2702,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                       readOnly
                       className="text-blue-600 focus:ring-blue-500 w-4 h-4" 
                     />
-                    <span className="text-xs font-bold text-slate-800">鍖洪棿鏄犲皠 (鍖洪棿娈?&rarr; 鍗曞€?</span>
+                    <span className="text-xs font-bold text-slate-800">区间映射 (区间段 &rarr; 单值)</span>
                   </label>
                 </div>
               </div>
@@ -2694,13 +2710,13 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
               {/* Rules List */}
               <div className="space-y-3">
                 <span className="text-xs font-black text-slate-500 uppercase tracking-widest block">
-                  娉涘寲鏄犲皠瑙勫垯 (Mapping Rules)
+                  泛化映射规则 (Mapping Rules)
                 </span>
                 <div className="space-y-2.5">
                   {[
-                    { index: 1, range: "18 - 29", target: "闈掑勾" },
-                    { index: 2, range: "30 - 59", target: "涓勾" },
-                    { index: 3, range: "60 - 100", target: "鑰佸勾" }
+                    { index: 1, range: "18 - 29", target: "青年" },
+                    { index: 2, range: "30 - 59", target: "中年" },
+                    { index: 3, range: "60 - 100", target: "老年" }
                   ].map((rule) => (
                     <div key={rule.index} className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl p-3.5">
                       <div className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-200 text-slate-700 font-black text-xs shrink-0">
@@ -2708,7 +2724,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                       </div>
                       <div className="flex-1 grid grid-cols-12 gap-3 items-center">
                         <div className="col-span-5 space-y-1">
-                          <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">鍘熷鍖洪棿 (宀?</span>
+                          <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">原始区间 (岁)</span>
                           <div className="text-xs font-black text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-2 select-none shadow-3xs">
                             {rule.range}
                           </div>
@@ -2717,7 +2733,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                           &rarr;
                         </div>
                         <div className="col-span-5 space-y-1">
-                          <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">鐩爣娉涘寲鍊?/span>
+                          <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">目标泛化值</span>
                           <div className="text-xs font-black text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-2 select-none shadow-3xs">
                             {rule.target}
                           </div>
@@ -2735,7 +2751,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 onClick={() => setShowReadOnlyMapping(false)}
                 className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl cursor-pointer transition-colors border-0"
               >
-                鍏抽棴
+                关闭
               </button>
             </div>
           </div>

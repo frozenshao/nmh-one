@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Project, ViewState, UploadState } from "../types";
-import { apiFetch } from "../lib/apiFetch";
 import { 
   Plus, Search, FolderKanban, User, Calendar, Settings2, Trash2, 
   FileText, Play, ShieldCheck, Edit3, X, HelpCircle, Loader2, Sparkles, Check, Upload, Sliders
@@ -29,7 +28,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
   const fetchProjects = async () => {
     setIsLoading(true);
     try {
-      const response = await apiFetch("/api/projects");
+      const response = await fetch("/api/projects");
       if (response.ok) {
         const data = await response.json();
         setProjects(data);
@@ -54,19 +53,19 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nameInput.trim()) {
-      alert("璇疯緭鍏ラ」鐩悕绉?);
+      alert("请输入项目名称");
       return;
     }
 
     try {
-      const response = await apiFetch("/api/projects", {
+      const response = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: nameInput,
           description: descInput,
           expectedK: expectedKInput,
-          creator: "鍒樻檽鏁忥紙椤圭洰鍚堣閮ㄧ粡鐞嗭級" // default realistic toB creator
+          creator: "刘晓敏（项目合规部经理）" // default realistic toB creator
         })
       });
 
@@ -77,11 +76,11 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
         setDescInput("");
         setExpectedKInput(5);
       } else {
-        alert("鏂板椤圭洰澶辫触锛岃閲嶈瘯");
+        alert("新增项目失败，请重试");
       }
     } catch (err) {
       console.error(err);
-      alert("鏂板椤圭洰寮傚父");
+      alert("新增项目异常");
     }
   };
 
@@ -99,12 +98,12 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
     e.preventDefault();
     if (!editingProject) return;
     if (!nameInput.trim()) {
-      alert("椤圭洰鍚嶇О涓嶈兘涓虹┖");
+      alert("项目名称不能为空");
       return;
     }
 
     try {
-      const response = await apiFetch(`/api/projects/${editingProject.id}`, {
+      const response = await fetch(`/api/projects/${editingProject.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,7 +121,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
         setDescInput("");
         setExpectedKInput(5);
       } else {
-        alert("缂栬緫椤圭洰澶辫触");
+        alert("编辑项目失败");
       }
     } catch (err) {
       console.error(err);
@@ -131,19 +130,19 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
 
   // Delete project
   const handleDeleteProject = async (id: string, name: string) => {
-    if (!confirm(`纭畾瑕佹案涔呭垹闄ゅ幓鏍囪瘑椤圭洰 [${name}] 鍚楋紵姝ゆ搷浣滀笉鍙€嗐€俙)) {
+    if (!confirm(`确定要永久删除去标识项目 [${name}] 吗？此操作不可逆。`)) {
       return;
     }
 
     try {
-      const response = await apiFetch(`/api/projects/${id}`, {
+      const response = await fetch(`/api/projects/${id}`, {
         method: "DELETE"
       });
 
       if (response.ok) {
         await fetchProjects();
       } else {
-        alert("鍒犻櫎椤圭洰澶辫触");
+        alert("删除项目失败");
       }
     } catch (err) {
       console.error(err);
@@ -157,14 +156,14 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm" id="project_search_bar_row">
         {/* Search Field */}
         <div className="flex items-center space-x-2 flex-1 max-w-lg">
-          <span className="text-xs font-black text-slate-700 whitespace-nowrap">椤圭洰鍚嶇О锛?/span>
+          <span className="text-xs font-black text-slate-700 whitespace-nowrap">项目名称：</span>
           <div className="relative flex-1">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
               <Search className="w-4 h-4" />
             </span>
             <input
               type="text"
-              placeholder="璇疯緭鍏ラ」鐩悕绉?
+              placeholder="请输入项目名称"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded text-xs font-bold tracking-tight focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-slate-800"
@@ -184,7 +183,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
           id="add_project_trigger_btn"
         >
           <Plus className="w-4.5 h-4.5 stroke-[3px]" />
-          <span>鏂板椤圭洰</span>
+          <span>新增项目</span>
         </button>
       </div>
 
@@ -192,7 +191,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-24" id="project_list_loader">
           <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-          <span className="text-xs text-slate-500 mt-3 font-black uppercase tracking-wider">姝ｅ湪璇诲彇鍖垮悕鍖栭」鐩?..</span>
+          <span className="text-xs text-slate-500 mt-3 font-black uppercase tracking-wider">正在读取匿名化项目...</span>
         </div>
       ) : filteredProjects.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6" id="project_cards_grid">
@@ -216,13 +215,13 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                          <span># {project.id}</span>
                        </div>
                        {project.expectedK !== undefined && isSchemeCompleted && (
-                         <div className="flex items-center space-x-1 text-[10px] text-purple-600 font-black bg-purple-50 px-2.5 py-1 rounded border border-purple-100" title="鏈€浣?K-Anonymity 瀹夊叏闃堝€?>
-                           <span>鏈€浣巏鍊? {project.expectedK}</span>
+                         <div className="flex items-center space-x-1 text-[10px] text-purple-600 font-black bg-purple-50 px-2.5 py-1 rounded border border-purple-100" title="最低 K-Anonymity 安全阈值">
+                           <span>最低k值: {project.expectedK}</span>
                          </div>
                        )}
                        {project.actualK !== undefined && (
-                         <div className="flex items-center space-x-1 text-[10px] text-emerald-600 font-black bg-emerald-50 px-2.5 py-1 rounded border border-emerald-100" title="瀹為檯 K-Anonymity 瀹夊叏鍊?>
-                           <span>瀹為檯K鍊? {project.actualK}</span>
+                         <div className="flex items-center space-x-1 text-[10px] text-emerald-600 font-black bg-emerald-50 px-2.5 py-1 rounded border border-emerald-100" title="实际 K-Anonymity 安全值">
+                           <span>实际K值: {project.actualK}</span>
                          </div>
                        )}
                      </div>
@@ -232,14 +231,14 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                         <button
                           onClick={() => openEditModal(project)}
                           className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-950 transition-colors"
-                          title="缂栬緫"
+                          title="编辑"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => setIsDeleteAlertOpen(true)}
                           className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
-                          title="鍒犻櫎椤圭洰"
+                          title="删除项目"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -251,7 +250,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                    </h3>
                    
                    <p className="text-xs text-slate-500 mt-2 leading-relaxed line-clamp-3">
-                     {project.description || "鏆傛棤鍏蜂綋鎻忚堪璇存槑銆?}
+                     {project.description || "暂无具体描述说明。"}
                    </p>
  
  
@@ -271,7 +270,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
  
                  {/* Action operations shelf - Single row with 4 buttons and NO icons */}
                  <div className="bg-slate-50 border-t border-slate-200 px-3 py-3.5 grid grid-cols-4 gap-1.5" id={`action_shelf_${project.id}`}>
-                   {/* 1. 鏂规鐢熸垚 */}
+                   {/* 1. 方案生成 */}
                    <button
                      onClick={() => onSelectAction(project, isSchemeCompleted ? 'scheme-doc' : 'scheme')}
                      className={`py-2 px-1 rounded text-[10px] md:text-[11px] font-black uppercase tracking-wider shadow-xs transition-all cursor-pointer border text-center flex items-center justify-center gap-1 ${
@@ -282,10 +281,10 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                      id={`action_scheme_${project.id}`}
                    >
                      {isSchemeCompleted && <Check className="w-3.5 h-3.5 text-amber-600 shrink-0 stroke-[3px]" />}
-                     <span>鏂规鐢熸垚</span>
+                     <span>方案生成</span>
                    </button>
  
-                   {/* 2. 鏁版嵁涓婁紶 */}
+                   {/* 2. 数据上传 */}
                    <button
                      disabled={!isSchemeCompleted}
                      onClick={() => onSelectAction(project, 'processing', 1)}
@@ -297,10 +296,10 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                      id={`action_upload_${project.id}`}
                    >
                      {isUploadCompleted && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0 stroke-[3px]" />}
-                     <span>鏁版嵁涓婁紶</span>
+                     <span>数据上传</span>
                    </button>
  
-                   {/* 3. 鍖垮悕鍖栫瓥鐣?*/}
+                   {/* 3. 匿名化策略 */}
                    <button
                      disabled={!isSchemeCompleted}
                      onClick={() => onSelectAction(project, 'processing', 2)}
@@ -312,10 +311,10 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                      id={`action_config_${project.id}`}
                    >
                      {isConfigCompleted && <Check className="w-3.5 h-3.5 text-purple-600 shrink-0 stroke-[3px]" />}
-                     <span>鍖垮悕鍖栫瓥鐣?/span>
+                     <span>匿名化策略</span>
                    </button>
  
-                   {/* 4. 鍖垮悕鍖栦换鍔?*/}
+                   {/* 4. 匿名化任务 */}
                    <button
                      disabled={!isTaskClickable}
                      onClick={() => onSelectAction(project, 'evaluation')}
@@ -327,7 +326,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                      id={`action_evaluate_${project.id}`}
                    >
                      {isTaskClickable && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[3px]" />}
-                     <span>鍖垮悕鍖栦换鍔?/span>
+                     <span>匿名化任务</span>
                    </button>
                  </div>
                </div>
@@ -340,15 +339,16 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
           <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <FolderKanban className="w-8 h-8" />
           </div>
-          <h3 className="font-bold text-gray-800 text-base">鍘绘爣璇嗛」鐩簱涓虹┖</h3>
+          <h3 className="font-bold text-gray-800 text-base">去标识项目库为空</h3>
           <p className="text-xs text-gray-400 mt-2 max-w-xs mx-auto leading-relaxed">
-            褰撳墠鏆傛湭寤虹珛鍚堣椤圭洰銆傝鐐瑰嚮鍙充笂鏂光€滄柊澧為」鐩€濊緭鍏ュ師濮嬭棰樿祫浜у拰椤圭洰璇存槑銆?          </p>
+            当前暂未建立合规项目。请点击右上方“新增项目”输入原始课题资产和项目说明。
+          </p>
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="mt-5 inline-flex items-center space-x-1.5 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-blue-100 transition-all"
           >
             <Plus className="w-4 h-4" />
-            <span>鏂板棣栦釜鍚堣椤圭洰</span>
+            <span>新增首个合规项目</span>
           </button>
         </div>
       )}
@@ -361,7 +361,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
             <div className="bg-slate-900 text-white px-6 py-5 flex items-center justify-between border-b-2 border-slate-950">
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-4.5 h-4.5 text-blue-400" />
-                <h3 className="font-black text-sm uppercase tracking-wider">鏂板</h3>
+                <h3 className="font-black text-sm uppercase tracking-wider">新增</h3>
               </div>
               <button 
                 onClick={() => setIsAddModalOpen(false)}
@@ -374,11 +374,11 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
             {/* Modal Body / Form */}
             <form onSubmit={handleAddProject} className="p-6 space-y-5">
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase tracking-widest mb-2">椤圭洰鍚嶇О <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-widest mb-2">项目名称 <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   required
-                  placeholder="璇疯緭鍏?
+                  placeholder="请输入"
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
                   className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-slate-800"
@@ -387,9 +387,9 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase tracking-widest mb-2">椤圭洰璇存槑</label>
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-widest mb-2">项目说明</label>
                 <textarea
-                  placeholder="璇疯緭鍏?
+                  placeholder="请输入"
                   value={descInput}
                   onChange={(e) => setDescInput(e.target.value)}
                   className="w-full h-32 p-3 bg-slate-50 border-2 border-slate-200 rounded text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all resize-none text-slate-800"
@@ -404,14 +404,14 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                   onClick={() => setIsAddModalOpen(false)}
                   className="px-5 py-2.5 rounded border-2 border-slate-200 text-xs font-black text-slate-600 hover:bg-slate-50 uppercase tracking-wider transition-all"
                 >
-                  鍙栨秷
+                  取消
                 </button>
                 <button
                   type="submit"
                   className="px-6 py-2.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-blue-100 transition-all"
                   id="add_project_submit"
                 >
-                  纭畾鏂板
+                  确定新增
                 </button>
               </div>
             </form>
@@ -427,7 +427,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
             <div className="bg-slate-900 text-white px-6 py-5 flex items-center justify-between border-b-2 border-slate-950">
               <div className="flex items-center space-x-2">
                 <Settings2 className="w-4.5 h-4.5 text-blue-400" />
-                <h3 className="font-black text-sm uppercase tracking-wider">缂栬緫</h3>
+                <h3 className="font-black text-sm uppercase tracking-wider">编辑</h3>
               </div>
               <button 
                 onClick={() => setIsEditModalOpen(false)}
@@ -440,7 +440,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
             {/* Modal Body / Form */}
             <form onSubmit={handleEditProject} className="p-6 space-y-5">
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase tracking-widest mb-2">椤圭洰鍚嶇О</label>
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-widest mb-2">项目名称</label>
                 <input
                   type="text"
                   disabled
@@ -450,7 +450,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase tracking-widest mb-2">椤圭洰璇存槑</label>
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-widest mb-2">项目说明</label>
                 <textarea
                   value={descInput}
                   onChange={(e) => setDescInput(e.target.value)}
@@ -465,13 +465,13 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                   onClick={() => setIsEditModalOpen(false)}
                   className="px-5 py-2.5 rounded border-2 border-slate-200 text-xs font-black text-slate-600 hover:bg-slate-50 uppercase tracking-wider transition-all"
                 >
-                  鍙栨秷
+                  取消
                 </button>
                 <button
                   type="submit"
                   className="px-6 py-2.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-blue-100 transition-all"
                 >
-                  淇濆瓨淇敼
+                  保存修改
                 </button>
               </div>
             </form>
@@ -487,7 +487,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
             <div className="bg-slate-900 text-white px-6 py-5 flex items-center justify-between border-b-2 border-slate-950">
               <div className="flex items-center space-x-2">
                 <HelpCircle className="w-4.5 h-4.5 text-amber-400" />
-                <h3 className="font-black text-sm uppercase tracking-wider">绯荤粺鎻愮ず</h3>
+                <h3 className="font-black text-sm uppercase tracking-wider">系统提示</h3>
               </div>
               <button 
                 onClick={() => setIsDeleteAlertOpen(false)}
@@ -505,7 +505,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-800 leading-relaxed">
-                    鐢变簬鍘熷瀷鐨勬暟鎹棶棰橈紝姝ゆ寜閽笉鍋氫氦浜掍粎鍋氳鏄庯紝鍏蜂綋璇存槑璇﹁PRD瀵瑰簲鍐呭
+                    由于原型的数据问题，此按钮不做交互仅做说明，具体说明详见PRD对应内容
                   </p>
                 </div>
               </div>
@@ -517,7 +517,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                   onClick={() => setIsDeleteAlertOpen(false)}
                   className="px-6 py-2 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider shadow-sm transition-all cursor-pointer"
                 >
-                  鎴戠煡閬撲簡
+                  我知道了
                 </button>
               </div>
             </div>

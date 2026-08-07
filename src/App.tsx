@@ -1,100 +1,368 @@
-import { FormEvent, useEffect, useState } from "react";
-import { CheckCircle2, FileText, Loader2, Pencil, Plus, Search, Shield, Trash2, X } from "lucide-react";
-import { Project } from "./types";
-import { createProject, deleteProject, generateScheme, listProjects, saveScheme, updateProject } from "./lib/projectStore";
-
-type Screen = "projects" | "scheme" | "evaluation";
+import React, { useState } from "react";
+import { Project, ViewState, UploadState } from "./types";
+import ProjectList from "./components/ProjectList";
+import AnonymizationScheme from "./components/AnonymizationScheme";
+import EditableSchemeForm from "./components/EditableSchemeForm";
+import AnonymizationProcessing from "./components/AnonymizationProcessing";
+import AnonymizationEvaluation from "./components/AnonymizationEvaluation";
+import SystemManagement from "./components/SystemManagement";
+import { Shield, ShieldCheck, Cpu, Database, Award, Server, User } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { STANDARD_CSV_FIELDS, STANDARD_DICOM_FIELDS } from "./lib/constants";
 
 export default function App() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [screen, setScreen] = useState<Screen>("projects");
-  const [selected, setSelected] = useState<Project | null>(null);
-  const [query, setQuery] = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<Project | null>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [expectedK, setExpectedK] = useState(5);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [scheme, setScheme] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [currentView, setCurrentView] = useState<ViewState>('projects');
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [processingInitialStep, setProcessingInitialStep] = useState<1 | 2 | null>(null);
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  
+  // Background upload states indexed by project ID
+  const [projectUploadStates, setProjectUploadStates] = useState<{ [projectId: string]: UploadState }>({});
 
-  const refresh = async () => setProjects(await listProjects());
-  useEffect(() => { void refresh(); }, []);
+  // Background upload simulation function
+  const startBackgroundUpload = (projectId: string, CSVFile: { name: string, headers?: string[] } | null, dicomFile: { name: string } | null, imageFile: { name: string } | null) => {
+    // Initialize state
+    setProjectUploadStates(prev => ({
+      ...prev,
+      [projectId]: {
+        CSVProgress: CSVFile ? 0 : null,
+        dicomProgress: dicomFile ? 0 : null,
+        imageProgress: imageFile ? 0 : null,
+        CSVFileName: CSVFile ? CSVFile.name : null,
+        dicomFileName: dicomFile ? dicomFile.name : null,
+        imageFileName: imageFile ? imageFile.name : null,
+        isUploading: true,
+        isCompleted: false,
+        parsedCSVFields: [],
+        parsedDICOMFields: []
+      }
+    }));
 
-  const openCreate = () => {
-    setEditing(null); setName(""); setDescription(""); setExpectedK(5); setShowForm(true);
-  };
-  const openEdit = (project: Project) => {
-    setEditing(project); setName(project.name); setDescription(project.description); setExpectedK(project.expectedK || 5); setShowForm(true);
-  };
-  const submitProject = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!name.trim()) return;
-    if (editing) await updateProject(editing.id, { name: name.trim(), description, expectedK });
-    else await createProject({ name: name.trim(), description, expectedK, creator: "System administrator" });
-    await refresh(); setShowForm(false);
-  };
-  const openScheme = (project: Project) => {
-    setSelected(project);
-    setScheme(project.schemeDocText || "");
-    setScreen("scheme");
-  };
-  const generate = async () => {
-    if (!selected) return;
-    setIsGenerating(true);
-    const result = await generateScheme(selected, { minimumK: selected.expectedK });
-    const updated = await saveScheme(selected.id, selected.schemeData || {}, result);
-    setSelected(updated); setScheme(result); await refresh(); setIsGenerating(false);
-  };
-  const saveDocument = async () => {
-    if (!selected) return;
-    const updated = await saveScheme(selected.id, selected.schemeData || {}, scheme);
-    setSelected(updated); await refresh(); setSaved(true); window.setTimeout(() => setSaved(false), 1800);
-  };
-  const calculateK = async () => {
-    if (!selected) return;
-    const updated = await updateProject(selected.id, { actualK: (selected.expectedK || 5) + 1 });
-    setSelected(updated); await refresh();
+    let currentCSV = CSVFile ? 0 : null;
+    let currentDicom = dicomFile ? 0 : null;
+    let currentImage = imageFile ? 0 : null;
+
+    const interval = setInterval(() => {
+      let isStillUploading = false;
+
+      if (currentCSV !== null && currentCSV < 100) {
+        currentCSV = Math.min(100, currentCSV + Math.floor(Math.random() * 12) + 6);
+        isStillUploading = true;
+      }
+      if (currentDicom !== null && currentDicom < 100) {
+        currentDicom = Math.min(100, currentDicom + Math.floor(Math.random() * 10) + 4);
+        isStillUploading = true;
+      }
+      if (currentImage !== null && currentImage < 100) {
+        currentImage = Math.min(100, currentImage + Math.floor(Math.random() * 14) + 7);
+        isStillUploading = true;
+      }
+
+      setProjectUploadStates(prev => {
+        const currentProjectState = prev[projectId];
+        if (!currentProjectState) {
+          clearInterval(interval);
+          return prev;
+        }
+
+        const isCompletedNow = 
+          (currentCSV === null || currentCSV === 100) && 
+          (currentDicom === null || currentDicom === 100) &&
+          (currentImage === null || currentImage === 100);
+
+        let parsedCSVFields = currentProjectState.parsedCSVFields || [];
+        let parsedDICOMFields = currentProjectState.parsedDICOMFields || [];
+
+        if (isCompletedNow && parsedCSVFields.length === 0 && parsedDICOMFields.length === 0) {
+          // Upload complete - generate standard/custom parsed fields
+          if (CSVFile) {
+            if (CSVFile.headers && CSVFile.headers.length > 0) {
+              parsedCSVFields = CSVFile.headers.map((h, i) => {
+                const standard = STANDARD_CSV_FIELDS.find(sf => sf.name === h);
+                if (standard) {
+                  return { ...standard, id: i + 1 };
+                } else {
+                  return {
+                    id: i + 1,
+                    name: h,
+                    def: "上传解析列",
+                    attr: "敏感属性" as const,
+                    tech: "原文" as const,
+                    note: "直接保留原文",
+                    computeK: "否" as const,
+                    generalizationRules: [],
+                    offsetDirection: "向后" as const,
+                    offsetDays: 7,
+                    pseudonymizationMode: "加密算法" as const,
+                    pseudonymizationAlgo: "SM3" as const,
+                    pseudonymizationFixed: ""
+                  };
+                }
+              });
+            } else {
+              parsedCSVFields = JSON.parse(JSON.stringify(STANDARD_CSV_FIELDS));
+            }
+          } else {
+            parsedCSVFields = JSON.parse(JSON.stringify(STANDARD_CSV_FIELDS));
+          }
+          if (dicomFile) {
+            parsedDICOMFields = JSON.parse(JSON.stringify(STANDARD_DICOM_FIELDS));
+          } else {
+            parsedDICOMFields = JSON.parse(JSON.stringify(STANDARD_DICOM_FIELDS));
+          }
+        }
+
+        return {
+          ...prev,
+          [projectId]: {
+            ...currentProjectState,
+            CSVProgress: currentCSV,
+            dicomProgress: currentDicom,
+            imageProgress: currentImage,
+            isUploading: isStillUploading,
+            isCompleted: isCompletedNow || currentProjectState.isCompleted,
+            parsedCSVFields,
+            parsedDICOMFields
+          }
+        };
+      });
+
+      if (!isStillUploading) {
+        clearInterval(interval);
+      }
+    }, 200);
   };
 
-  const visibleProjects = projects.filter((project) => project.name.toLowerCase().includes(query.toLowerCase()));
+  // Handle action selection from card operations list
+  const handleSelectAction = (project: Project, action: ViewState, initialStep?: 1 | 2) => {
+    setSelectedProject(project);
+    setCurrentView(action);
+    setProcessingInitialStep(initialStep !== undefined ? initialStep : null);
+  };
+
+  // Back to dashboard
+  const handleBackToDashboard = () => {
+    setCurrentView('projects');
+    setSelectedProject(null);
+  };
+
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <button className="flex items-center gap-3" onClick={() => { setScreen("projects"); setSelected(null); }}>
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white"><Shield size={22} /></span>
-            <span className="text-left"><strong className="block text-sm font-black tracking-tight">Data Anonymization Platform</strong><small className="text-xs text-slate-500">Static deployment workspace</small></span>
-          </button>
-          <span className="hidden text-xs font-semibold text-slate-500 sm:block">All data stays in this browser</span>
+    <div className="min-h-screen bg-[#F8FAFC] font-sans flex flex-col justify-between" id="platform_root_app">
+      
+      {/* Platform Professional Corporate Header - Bold Typography Theme */}
+      <header className="bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 shadow-xs" id="platform_top_header">
+        <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row items-center justify-between gap-6 py-4">
+          
+          {/* Logo Brand Group */}
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 bg-blue-600 rounded flex items-center justify-center shadow-md shadow-blue-200">
+              <Shield className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-slate-900">
+                医疗健康数据智能匿名化平台
+              </h1>
+            </div>
+          </div>
+
+          {/* Quick Stats & User Profile Group */}
+          <div className="flex items-center space-x-6 text-xs font-bold text-slate-600">
+            
+            {/* Audit User */}
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-full bg-blue-50 border-2 border-blue-600 flex items-center justify-center">
+                <User className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="text-left hidden sm:block">
+                <p className="font-black text-slate-900 text-xs">张国栋</p>
+              </div>
+            </div>
+
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-5 py-8">
-        {screen === "projects" && <>
-          <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div><p className="mb-1 text-xs font-bold uppercase tracking-widest text-blue-600">Workspace</p><h1 className="text-3xl font-black tracking-tight">Projects</h1><p className="mt-2 text-sm text-slate-500">Create and review anonymization plans without a backend service.</p></div>
-            <button onClick={openCreate} className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"><Plus size={17} /> New project</button>
-          </div>
-          <div className="mb-5 flex max-w-md items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5"><Search size={17} className="text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects" className="w-full bg-transparent text-sm outline-none" /></div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {visibleProjects.map((project) => <article key={project.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-5 flex items-start justify-between gap-3"><div><p className="font-mono text-xs text-blue-600">#{project.id}</p><h2 className="mt-2 text-lg font-extrabold">{project.name}</h2></div><div className="flex gap-1"><button title="Edit project" onClick={() => openEdit(project)} className="rounded p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-800"><Pencil size={15} /></button><button title="Delete project" onClick={async () => { if (window.confirm("Delete this project?")) { await deleteProject(project.id); await refresh(); } }} className="rounded p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 size={15} /></button></div></div>
-              <p className="mb-5 min-h-10 text-sm leading-6 text-slate-500">{project.description || "No description"}</p>
-              <div className="mb-5 flex items-center justify-between border-t border-slate-100 pt-4 text-xs text-slate-500"><span>Minimum k: <b className="text-slate-800">{project.expectedK || 5}</b></span><span>{project.actualK ? `Actual k: ${project.actualK}` : "Not evaluated"}</span></div>
-              <div className="flex gap-2"><button onClick={() => openScheme(project)} className="flex-1 rounded-lg bg-blue-50 px-3 py-2.5 text-xs font-bold text-blue-700 hover:bg-blue-100"><FileText size={14} className="mr-1 inline" /> {project.schemeDocText ? "Open plan" : "Generate plan"}</button><button onClick={() => { setSelected(project); setScreen("evaluation"); }} className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50">Evaluate</button></div>
-            </article>)}
-          </div>
-          {!visibleProjects.length && <p className="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center text-sm text-slate-500">No projects match your search.</p>}
-        </>}
+      {/* Main Container Content */}
+      <main className="flex-1 pb-16">
+        
+        {/* Dynamic page transition */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentView}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
+            className="w-full"
+          >
+            {currentView === 'projects' && (
+              <ProjectList onSelectAction={handleSelectAction} projectUploadStates={projectUploadStates} />
+            )}
 
-        {screen === "scheme" && selected && <section className="mx-auto max-w-4xl"><button onClick={() => setScreen("projects")} className="mb-6 text-sm font-bold text-blue-600">Back to projects</button><div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p className="font-mono text-xs text-blue-600">#{selected.id}</p><h1 className="mt-1 text-2xl font-black">{selected.name}</h1></div><button disabled={isGenerating} onClick={generate} className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60">{isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} {isGenerating ? "Generating..." : "Generate plan"}</button></div><textarea value={scheme} onChange={(event) => setScheme(event.target.value)} placeholder="Generate a plan or start writing here..." className="min-h-[520px] w-full rounded-xl border border-slate-200 bg-white p-5 font-mono text-sm leading-7 shadow-sm outline-none focus:border-blue-500" /><div className="mt-4 flex items-center justify-end gap-3"><button onClick={saveDocument} className="rounded-lg bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700">Save plan</button>{saved && <span className="text-sm font-semibold text-emerald-700"><CheckCircle2 size={16} className="mr-1 inline" />Saved</span>}</div></section>}
+            {currentView === 'scheme' && selectedProject && (
+              <AnonymizationScheme 
+                project={selectedProject} 
+                onBack={handleBackToDashboard} 
+                onSchemeGenerated={() => setCurrentView('scheme-doc')}
+              />
+            )}
 
-        {screen === "evaluation" && selected && <section className="mx-auto max-w-2xl"><button onClick={() => setScreen("projects")} className="mb-6 text-sm font-bold text-blue-600">Back to projects</button><div className="rounded-xl border border-slate-200 bg-white p-7 shadow-sm"><p className="font-mono text-xs text-blue-600">#{selected.id}</p><h1 className="mt-2 text-2xl font-black">K-anonymity evaluation</h1><p className="mt-2 text-sm text-slate-500">Run a local demonstration calculation for this project.</p><div className="my-8 grid grid-cols-2 gap-4"><div className="rounded-lg bg-slate-50 p-5"><span className="text-xs font-bold uppercase tracking-wider text-slate-500">Minimum k</span><strong className="mt-2 block text-3xl">{selected.expectedK || 5}</strong></div><div className="rounded-lg bg-emerald-50 p-5"><span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Actual k</span><strong className="mt-2 block text-3xl text-emerald-700">{selected.actualK || "--"}</strong></div></div><button onClick={calculateK} className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700">Calculate local result</button></div></section>}
+            {currentView === 'scheme-doc' && selectedProject && (
+              <EditableSchemeForm
+                project={selectedProject}
+                onBack={handleBackToDashboard}
+                onRegenerate={async () => {
+                  try {
+                    await fetch(`/api/projects/${selectedProject.id}`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ isRegeneratingPending: true })
+                    });
+                  } catch (err) {
+                    console.error("Failed to update project regeneration status:", err);
+                  }
+
+                  // Clear client-side project fields
+                  selectedProject.schemeDocText = undefined;
+                  selectedProject.schemeData = undefined;
+                  selectedProject.isRegeneratingPending = true;
+
+                  // Clear upload and config states in client state
+                  setProjectUploadStates(prev => ({
+                    ...prev,
+                    [selectedProject.id]: {
+                      CSVProgress: null,
+                      dicomProgress: null,
+                      imageProgress: null,
+                      CSVFileName: null,
+                      dicomFileName: null,
+                      imageFileName: null,
+                      isUploading: false,
+                      isCompleted: false,
+                      isConfigCompleted: false,
+                      parsedCSVFields: [],
+                      parsedDICOMFields: []
+                    }
+                  }));
+
+                  setCurrentView('scheme');
+                }}
+              />
+            )}
+
+            {currentView === 'processing' && selectedProject && (
+              <AnonymizationProcessing 
+                project={selectedProject} 
+                onBack={handleBackToDashboard} 
+                initialStep={processingInitialStep || undefined}
+                onSaveSuccess={() => setShowSaveSuccess(true)}
+                uploadState={projectUploadStates[selectedProject.id] || {
+                  CSVProgress: null,
+                  dicomProgress: null,
+                  imageProgress: null,
+                  CSVFileName: null,
+                  dicomFileName: null,
+                  imageFileName: null,
+                  isUploading: false,
+                  isCompleted: false,
+                  parsedCSVFields: [],
+                  parsedDICOMFields: []
+                }}
+                onStartUpload={(CSVFile, dicomFile, imageFile) => startBackgroundUpload(selectedProject.id, CSVFile, dicomFile, imageFile)}
+                onUpdateUploadState={(state) => {
+                  setProjectUploadStates(prev => ({
+                    ...prev,
+                    [selectedProject.id]: {
+                      ...(prev[selectedProject.id] || {
+                        CSVProgress: null,
+                        dicomProgress: null,
+                        CSVFileName: null,
+                        dicomFileName: null,
+                        isUploading: false,
+                        isCompleted: false,
+                        parsedCSVFields: [],
+                        parsedDICOMFields: []
+                      }),
+                      ...state
+                    }
+                  }));
+                }}
+              />
+            )}
+
+            {currentView === 'evaluation' && selectedProject && (
+              <AnonymizationEvaluation 
+                project={selectedProject} 
+                onBack={handleBackToDashboard} 
+                onUpdateProject={(updatedProject) => {
+                  setSelectedProject(updatedProject);
+                }}
+                uploadState={projectUploadStates[selectedProject.id] || {
+                  CSVProgress: null,
+                  dicomProgress: null,
+                  CSVFileName: null,
+                  dicomFileName: null,
+                  isUploading: false,
+                  isCompleted: false,
+                  parsedCSVFields: [],
+                  parsedDICOMFields: []
+                }}
+              />
+            )}
+
+            {currentView === 'system-mgmt' && (
+              <SystemManagement />
+            )}
+          </motion.div>
+        </AnimatePresence>
+
       </main>
 
-      {showForm && <div className="fixed inset-0 z-10 flex items-center justify-center bg-slate-950/40 p-5"><form onSubmit={submitProject} className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl"><div className="mb-5 flex items-center justify-between"><h2 className="text-lg font-black">{editing ? "Edit project" : "New project"}</h2><button type="button" onClick={() => setShowForm(false)} className="rounded p-1 text-slate-400 hover:bg-slate-100"><X size={18} /></button></div><label className="mb-4 block text-sm font-bold">Name<input required value={name} onChange={(event) => setName(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500" /></label><label className="mb-4 block text-sm font-bold">Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} className="mt-2 min-h-24 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500" /></label><label className="mb-6 block text-sm font-bold">Minimum k<input type="number" min="2" value={expectedK} onChange={(event) => setExpectedK(Number(event.target.value))} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500" /></label><button className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700">{editing ? "Save changes" : "Create project"}</button></form></div>}
+      {/* Save Success Modal */}
+      {showSaveSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200 text-center p-6 space-y-4">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto text-emerald-600">
+              <ShieldCheck className="w-7 h-7" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-900">保存成功</h3>
+              <p className="text-xs text-slate-500 font-semibold mt-1">
+                匿名化策略保存成功！
+              </p>
+            </div>
+            <button
+              id="strategy_save_success_dismiss_btn"
+              onClick={() => setShowSaveSuccess(false)}
+              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded shadow-xs transition-colors cursor-pointer"
+            >
+              确定
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Professional toB Dashboard Footer */}
+      <footer className="bg-white border-t border-gray-150 py-6" id="platform_footer">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
+          <div className="flex items-center space-x-2.5">
+            <Database className="w-4 h-4 text-gray-300" />
+            <span>医疗健康数据去标识化智能安全管理控制系统 (V3.2.0-Enterprise)</span>
+          </div>
+          <div className="flex space-x-4">
+            <span className="flex items-center space-x-1">
+              <Server className="w-3.5 h-3.5 text-gray-300" />
+              <span>专线数据节点: RUIJIN_HIS_NODE</span>
+            </span>
+            <span className="flex items-center space-x-1">
+              <Award className="w-3.5 h-3.5 text-gray-300" />
+              <span>国家标准: GB/T 37964 严密符合</span>
+            </span>
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 }
