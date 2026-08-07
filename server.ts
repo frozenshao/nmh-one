@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 
@@ -9,7 +8,20 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
+export { app };
+
 app.use(express.json({ limit: "15mb" }));
+
+if (process.env.NETLIFY_SERVERLESS === "true") {
+  app.use((req, _res, next) => {
+    if (req.url.startsWith("/.netlify/functions/api")) {
+      req.url = req.url.replace(/^\/\.netlify\/functions\/api/, "/api");
+    } else if (!req.url.startsWith("/api")) {
+      req.url = `/api${req.url.startsWith("/") ? req.url : `/${req.url}`}`;
+    }
+    next();
+  });
+}
 
 // Initialize Google Gemini Client
 const apiKey = process.env.GEMINI_API_KEY || "";
@@ -857,6 +869,7 @@ ${nonCompliantMgmt
 // Start Server
 async function start() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -875,4 +888,6 @@ async function start() {
   });
 }
 
-start();
+if (process.env.NETLIFY_SERVERLESS !== "true" && process.env.AWS_LAMBDA_FUNCTION_NAME === undefined) {
+  start();
+}
