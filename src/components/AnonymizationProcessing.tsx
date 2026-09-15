@@ -4,9 +4,10 @@ import {
   ArrowLeft, Eye, EyeOff, ShieldAlert, Sparkles, Check, Play, RefreshCw, 
   HelpCircle, ChevronRight, FileSpreadsheet, Download, Info, Trash2, 
   Plus, Minus, UploadCloud, CheckCircle2, ShieldCheck, FileCode, ArrowRight, Settings2, Lock, Loader2,
-  BarChart2, X, Sliders, Globe
+  BarChart2, X, Sliders, Globe, Pencil, FileCheck, Scan
 } from "lucide-react";
 import { STANDARD_CSV_FIELDS, STANDARD_DICOM_FIELDS } from "../lib/constants";
+import { DirectoryFileTreeSelect } from "./DirectoryFileTreeSelect";
 
 interface AnonymizationProcessingProps {
   project: Project;
@@ -16,6 +17,7 @@ interface AnonymizationProcessingProps {
   onUpdateUploadState: (state: Partial<UploadState>) => void;
   initialStep?: 1 | 2;
   onSaveSuccess?: () => void;
+  onGoToScheme?: () => void;
 }
 
 // Interactive sample records representing raw clinical data
@@ -281,7 +283,8 @@ export default function AnonymizationProcessing({
   onStartUpload, 
   onUpdateUploadState,
   initialStep,
-  onSaveSuccess
+  onSaveSuccess,
+  onGoToScheme
 }: AnonymizationProcessingProps) {
   
   // Wizards steps: 1 = Upload, 2 = Config, 3 = Simulation Results
@@ -293,19 +296,103 @@ export default function AnonymizationProcessing({
   const [dicomFiles, setDicomFiles] = useState<File[]>([]);
 
   // Dropdown selections for CSV categories
-  const [admissionSelect, setAdmissionSelect] = useState<string>("");
-  const [checkSelect, setCheckSelect] = useState<string>("");
-  const [testSelect, setTestSelect] = useState<string>("");
+  const [admissionSelect, setAdmissionSelect] = useState<string>("test002.csv");
+  const [checkSelect, setCheckSelect] = useState<string>("test9999.csv");
+  const [testSelect, setTestSelect] = useState<string>("test001.csv");
 
   // Dropdown selection for DICOM
-  const [dicomSelect, setDicomSelect] = useState<string>("");
+  const [dicomSelect, setDicomSelect] = useState<string>("disk01/data/dicom");
 
   // Dropdown selections for Image categories
-  const [recordSelect, setRecordSelect] = useState<string>("");
-  const [orderSelect, setOrderSelect] = useState<string>("");
+  const [recordSelect, setRecordSelect] = useState<string>("disk01/data/image");
+  const [orderSelect, setOrderSelect] = useState<string>("disk01/data/image/record");
 
   // State for showing the Save Failure dialog
   const [showSaveFailModal, setShowSaveFailModal] = useState<boolean>(false);
+
+  // Step 1 upload page edit and validation states
+  const [isEditingUpload, setIsEditingUpload] = useState<boolean>(false);
+  const [isValidating, setIsValidating] = useState<boolean>(false);
+  const [validateProgress, setValidateProgress] = useState<number>(0);
+  const [validationDone, setValidationDone] = useState<boolean>(false);
+  const [backupUploadValues, setBackupUploadValues] = useState<{
+    admissionSelect: string;
+    checkSelect: string;
+    testSelect: string;
+    dicomSelect: string;
+    recordSelect: string;
+    orderSelect: string;
+  } | null>(null);
+
+  const handleStartEdit = () => {
+    setBackupUploadValues({
+      admissionSelect,
+      checkSelect,
+      testSelect,
+      dicomSelect,
+      recordSelect,
+      orderSelect
+    });
+    setIsEditingUpload(true);
+  };
+
+  const handleCancelEdit = () => {
+    if (backupUploadValues) {
+      setAdmissionSelect(backupUploadValues.admissionSelect);
+      setCheckSelect(backupUploadValues.checkSelect);
+      setTestSelect(backupUploadValues.testSelect);
+      setDicomSelect(backupUploadValues.dicomSelect);
+      setRecordSelect(backupUploadValues.recordSelect);
+      setOrderSelect(backupUploadValues.orderSelect);
+    }
+    setIsEditingUpload(false);
+  };
+
+  const handleSaveEdit = () => {
+    // Directly exit edit mode without showing any modal dialog
+    setIsEditingUpload(false);
+  };
+
+  const handleStartValidation = () => {
+    setIsValidating(true);
+    setValidateProgress(0);
+    setValidationDone(false);
+  };
+
+  const handleCancelValidation = () => {
+    setIsValidating(false);
+    setValidateProgress(0);
+    setValidationDone(false);
+  };
+
+  // Validation timer simulation
+  useEffect(() => {
+    let interval: any = null;
+    if (isValidating) {
+      interval = setInterval(() => {
+        setValidateProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setIsValidating(false);
+            setValidationDone(true);
+            return 100;
+          }
+          const increment = Math.floor(Math.random() * 12) + 8;
+          const next = prev + increment;
+          if (next >= 100) {
+            clearInterval(interval);
+            setIsValidating(false);
+            setValidationDone(true);
+            return 100;
+          }
+          return next;
+        });
+      }, 120);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isValidating]);
 
   // Default rules state for image categories
   const [recordImageRules, setRecordImageRules] = useState([
@@ -324,12 +411,12 @@ export default function AnonymizationProcessing({
   // Pre-fill default files for the first project (p1) to show "default each category has one data item uploaded"
   useEffect(() => {
     if (project?.id === "p1") {
-      setAdmissionSelect("住院信息");
-      setCheckSelect("检查信息");
-      setTestSelect("检验信息");
-      setDicomSelect("bysy/djienf/rerrr");
-      setRecordSelect("bysy/djienf/bfgfg/drerre");
-      setOrderSelect("bysy/gferer/fbnbn");
+      setAdmissionSelect("test002.csv");
+      setCheckSelect("test9999.csv");
+      setTestSelect("test001.csv");
+      setDicomSelect("disk01/data/dicom");
+      setRecordSelect("disk01/data/image");
+      setOrderSelect("disk01/data/image/record");
 
       if (admissionFiles.length === 0 && checkFiles.length === 0 && testFiles.length === 0 && dicomFiles.length === 0 && recordFiles.length === 0 && orderFiles.length === 0) {
         // Create mock file objects
@@ -1434,7 +1521,7 @@ export default function AnonymizationProcessing({
   };
 
   const isUploadActive = step === 1;
-  const currentTitle = isUploadActive ? "数据上传" : "匿名化策略";
+  const currentTitle = isUploadActive ? "数据源配置" : "匿名化策略";
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-8" id="anonymization_processing_container">
@@ -1463,7 +1550,108 @@ export default function AnonymizationProcessing({
         </div>
 
         {/* Unified Top Right Buttons */}
-        {(step === 1 || step === 2) && (
+        {step === 1 && (
+          <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end">
+            {isEditingUpload ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded border border-slate-300 transition-all active:scale-98 cursor-pointer flex items-center justify-center"
+                  id="btn_upload_cancel_edit"
+                >
+                  <span>取消</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEdit}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded shadow-xs transition-all active:scale-98 flex items-center justify-center space-x-1.5 cursor-pointer"
+                  id="btn_upload_save_edit"
+                >
+                  <Check className="w-4 h-4 text-white" />
+                  <span>保存</span>
+                </button>
+              </>
+            ) : (
+              <>
+                {/* 正在扫描状态 */}
+                {isValidating && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center space-x-2 bg-blue-50 border border-blue-200 text-blue-700 px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-2xs">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 shrink-0" />
+                      <span>扫描进度 {validateProgress}%</span>
+                      <div className="w-16 bg-blue-200 h-1.5 rounded-full overflow-hidden ml-1">
+                        <div 
+                          className="bg-blue-600 h-full transition-all duration-150 rounded-full" 
+                          style={{ width: `${validateProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCancelValidation}
+                      className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded border border-rose-200 transition-all active:scale-98 cursor-pointer flex items-center justify-center space-x-1"
+                      id="btn_cancel_validation"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>取消扫描</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* 扫描完成状态 */}
+                {!isValidating && validationDone && (
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowSaveFailModal(true)}
+                      className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs rounded border border-emerald-300 transition-all active:scale-98 cursor-pointer flex items-center justify-center space-x-1.5 shadow-2xs"
+                      id="btn_scan_completed"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>扫描已完成</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleStartEdit}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded shadow-xs transition-all active:scale-98 flex items-center justify-center space-x-1.5 cursor-pointer"
+                      id="btn_start_edit_upload"
+                    >
+                      <Pencil className="w-3.5 h-3.5 text-white" />
+                      <span>编辑</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* 默认未扫描状态 */}
+                {!isValidating && !validationDone && (
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleStartValidation}
+                      className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded border border-indigo-200 transition-all active:scale-98 cursor-pointer flex items-center justify-center space-x-1.5"
+                      id="btn_validate_fields"
+                    >
+                      <Scan className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>数据扫描</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleStartEdit}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded shadow-xs transition-all active:scale-98 flex items-center justify-center space-x-1.5 cursor-pointer"
+                      id="btn_start_edit_upload"
+                    >
+                      <Pencil className="w-3.5 h-3.5 text-white" />
+                      <span>编辑</span>
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {step === 2 && (
           <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
@@ -1475,12 +1663,8 @@ export default function AnonymizationProcessing({
             <button
               type="button"
               onClick={() => {
-                if (step === 1) {
-                  setShowSaveFailModal(true);
-                } else if (step === 2) {
-                  if (onSaveSuccess) onSaveSuccess();
-                  onBack();
-                }
+                if (onSaveSuccess) onSaveSuccess();
+                onBack();
               }}
               className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded shadow-xs transition-all active:scale-98 flex items-center justify-center space-x-1.5 cursor-pointer"
             >
@@ -1523,21 +1707,13 @@ export default function AnonymizationProcessing({
                       </h4>
                     </div>
                     <div className="mt-4">
-                      <select
+                      <DirectoryFileTreeSelect
                         id="admission_csv_select"
+                        mode="csv"
+                        disabled={!isEditingUpload}
                         value={admissionSelect}
-                        onChange={(e) => setAdmissionSelect(e.target.value)}
-                        className="w-full py-2 px-3 bg-white text-slate-800 text-xs font-semibold rounded border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors"
-                      >
-                        <option value="">请选择（单选）</option>
-                        <option value="住院信息">住院信息</option>
-                        <option value="门诊信息">门诊信息</option>
-                        <option value="检查信息">检查信息</option>
-                        <option value="检验信息">检验信息</option>
-                        <option value="诊断信息">诊断信息</option>
-                        <option value="门诊医嘱">门诊医嘱</option>
-                        <option value="住院医嘱">住院医嘱</option>
-                      </select>
+                        onChange={(val) => setAdmissionSelect(val)}
+                      />
                     </div>
                   </div>
 
@@ -1550,21 +1726,13 @@ export default function AnonymizationProcessing({
                       </h4>
                     </div>
                     <div className="mt-4">
-                      <select
+                      <DirectoryFileTreeSelect
                         id="check_csv_select"
+                        mode="csv"
+                        disabled={!isEditingUpload}
                         value={checkSelect}
-                        onChange={(e) => setCheckSelect(e.target.value)}
-                        className="w-full py-2 px-3 bg-white text-slate-800 text-xs font-semibold rounded border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors"
-                      >
-                        <option value="">请选择（单选）</option>
-                        <option value="住院信息">住院信息</option>
-                        <option value="门诊信息">门诊信息</option>
-                        <option value="检查信息">检查信息</option>
-                        <option value="检验信息">检验信息</option>
-                        <option value="诊断信息">诊断信息</option>
-                        <option value="门诊医嘱">门诊医嘱</option>
-                        <option value="住院医嘱">住院医嘱</option>
-                      </select>
+                        onChange={(val) => setCheckSelect(val)}
+                      />
                     </div>
                   </div>
 
@@ -1577,21 +1745,13 @@ export default function AnonymizationProcessing({
                       </h4>
                     </div>
                     <div className="mt-4">
-                      <select
+                      <DirectoryFileTreeSelect
                         id="test_csv_select"
+                        mode="csv"
+                        disabled={!isEditingUpload}
                         value={testSelect}
-                        onChange={(e) => setTestSelect(e.target.value)}
-                        className="w-full py-2 px-3 bg-white text-slate-800 text-xs font-semibold rounded border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors"
-                      >
-                        <option value="">请选择（单选）</option>
-                        <option value="住院信息">住院信息</option>
-                        <option value="门诊信息">门诊信息</option>
-                        <option value="检查信息">检查信息</option>
-                        <option value="检验信息">检验信息</option>
-                        <option value="诊断信息">诊断信息</option>
-                        <option value="门诊医嘱">门诊医嘱</option>
-                        <option value="住院医嘱">住院医嘱</option>
-                      </select>
+                        onChange={(val) => setTestSelect(val)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1615,17 +1775,13 @@ export default function AnonymizationProcessing({
                 </div>
 
                 <div className="mt-4 max-w-md">
-                  <select
+                  <DirectoryFileTreeSelect
                     id="dicom_select"
+                    mode="dicom"
+                    disabled={!isEditingUpload}
                     value={dicomSelect}
-                    onChange={(e) => setDicomSelect(e.target.value)}
-                    className="w-full py-2.5 px-3 bg-white text-slate-800 text-xs font-semibold rounded border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors"
-                  >
-                    <option value="">请选择（单选）</option>
-                    <option value="bysy/djienf/rerrr">bysy/djienf/rerrr</option>
-                    <option value="bysy/djienf/bfgfg/drerre">bysy/djienf/bfgfg/drerre</option>
-                    <option value="bysy/gferer/fbnbn">bysy/gferer/fbnbn</option>
-                  </select>
+                    onChange={(val) => setDicomSelect(val)}
+                  />
                 </div>
               </div>
 
@@ -1654,17 +1810,13 @@ export default function AnonymizationProcessing({
                       </h4>
                     </div>
                     <div className="mt-4">
-                      <select
+                      <DirectoryFileTreeSelect
                         id="record_image_select"
+                        mode="image"
+                        disabled={!isEditingUpload}
                         value={recordSelect}
-                        onChange={(e) => setRecordSelect(e.target.value)}
-                        className="w-full py-2 px-3 bg-white text-slate-800 text-xs font-semibold rounded border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors"
-                      >
-                        <option value="">请选择（单选）</option>
-                        <option value="bysy/djienf/rerrr">bysy/djienf/rerrr</option>
-                        <option value="bysy/djienf/bfgfg/drerre">bysy/djienf/bfgfg/drerre</option>
-                        <option value="bysy/gferer/fbnbn">bysy/gferer/fbnbn</option>
-                      </select>
+                        onChange={(val) => setRecordSelect(val)}
+                      />
                     </div>
                   </div>
 
@@ -1677,17 +1829,13 @@ export default function AnonymizationProcessing({
                       </h4>
                     </div>
                     <div className="mt-4">
-                      <select
+                      <DirectoryFileTreeSelect
                         id="order_image_select"
+                        mode="image"
+                        disabled={!isEditingUpload}
                         value={orderSelect}
-                        onChange={(e) => setOrderSelect(e.target.value)}
-                        className="w-full py-2 px-3 bg-white text-slate-800 text-xs font-semibold rounded border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors"
-                      >
-                        <option value="">请选择（单选）</option>
-                        <option value="bysy/djienf/rerrr">bysy/djienf/rerrr</option>
-                        <option value="bysy/djienf/bfgfg/drerre">bysy/djienf/bfgfg/drerre</option>
-                        <option value="bysy/gferer/fbnbn">bysy/gferer/fbnbn</option>
-                      </select>
+                        onChange={(val) => setOrderSelect(val)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1718,78 +1866,180 @@ export default function AnonymizationProcessing({
 
             {/* Bottom action buttons moved to the top-right header */}
 
-            {/* Save failure popup modal */}
+            {/* Save failure / Scan result comparison modal matching image 1.png */}
             {showSaveFailModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden animate-in zoom-in-95 duration-200 text-left">
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200" id="scan_result_modal">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-5xl w-full overflow-hidden animate-in zoom-in-95 duration-200 text-left">
                   
                   {/* Header */}
-                  <div className="bg-rose-50 border-b border-rose-100 px-6 py-4 flex items-center space-x-3 text-rose-800">
-                    <ShieldAlert className="w-6 h-6 text-rose-600 font-bold shrink-0" />
-                    <div>
-                      <h3 className="text-sm font-black tracking-tight text-slate-900">保存失败</h3>
-                      <p className="text-[10px] text-rose-700/80 font-semibold uppercase tracking-wider">结构校验异常</p>
+                  <div className="bg-slate-50/70 border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                        <Scan className="w-5 h-5 stroke-[2.2]" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-extrabold text-slate-900 tracking-tight leading-snug">数据扫描结果</h3>
+                        <p className="text-xs text-blue-600 font-bold tracking-tight">字段差异对比</p>
+                      </div>
                     </div>
+                    <button 
+                      onClick={() => setShowSaveFailModal(false)}
+                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-0 cursor-pointer"
+                      title="关闭"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
 
                   {/* Content */}
-                  <div className="p-6 space-y-4">
-                    {/* Sec 1: CSV */}
-                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-                      <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2.5 flex items-center">
-                        <span className="w-1.5 h-3 bg-emerald-500 rounded-xs mr-2" />
-                        1. CSV文本数据-住院信息：
-                      </h4>
-                      <div className="space-y-1.5 pl-3.5">
-                        <div className="flex items-start space-x-2 text-xs text-rose-600 font-semibold">
-                          <span className="font-bold shrink-0 text-rose-700">×</span>
-                          <span>选中数据比匿名化方案多3个字段：诊断信息、医生姓名、签名时间</span>
+                  <div className="p-6 space-y-6 max-h-[72vh] overflow-y-auto">
+                    {/* Sec 1: CSV文本数据 */}
+                    <div>
+                      <div className="flex items-center space-x-2 mb-3">
+                        <span className="w-1.5 h-4 bg-emerald-600 rounded-full inline-block" />
+                        <h4 className="font-extrabold text-slate-900 text-sm md:text-base tracking-tight">CSV文本数据</h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Left: 实际数据中未出现的字段 */}
+                        <div className="rounded-xl border border-amber-200/90 bg-white overflow-hidden shadow-2xs">
+                          <div className="bg-amber-50/70 border-b border-amber-100/90 px-4 py-2.5 flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3.5 h-3.5 rounded-full border border-amber-500 text-amber-600 flex items-center justify-center text-[9px] font-black shrink-0">
+                                !
+                              </div>
+                              <span className="text-xs font-bold text-slate-800">实际数据中未出现的字段</span>
+                            </div>
+                            <span className="text-xs font-bold text-amber-800 bg-white border border-amber-200/80 px-2.5 py-0.5 rounded-full shadow-3xs">
+                              11 项
+                            </span>
+                          </div>
+                          <div className="max-h-48 overflow-y-auto p-4 space-y-2.5 text-xs font-bold text-slate-800">
+                            <div>就诊号</div>
+                            <div>病历名称</div>
+                            <div>长文本测试字段</div>
+                            <div>主诉</div>
+                            <div>现病史</div>
+                            <div>既往史</div>
+                            <div>婚育史</div>
+                            <div>个人史</div>
+                            <div>家族史</div>
+                            <div>体格检查</div>
+                            <div>初步诊断</div>
+                          </div>
                         </div>
-                        <div className="flex items-start space-x-2 text-xs text-amber-600 font-semibold">
-                          <span className="font-bold shrink-0 text-amber-700">！</span>
-                          <span>选中数据比匿名化方案少2个字段：国籍、职业</span>
+
+                        {/* Right: 方案中未添加字段 (出现文件数) */}
+                        <div className="rounded-xl border border-rose-200/90 bg-white overflow-hidden shadow-2xs">
+                          <div className="bg-rose-50/70 border-b border-rose-100/90 px-4 py-2.5 flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-rose-500 font-bold text-xs shrink-0 leading-none">✕</span>
+                              <span className="text-xs font-bold text-slate-800">方案中未添加字段 (出现文件数)</span>
+                            </div>
+                            <span className="text-xs font-bold text-rose-800 bg-white border border-rose-200/80 px-2.5 py-0.5 rounded-full shadow-3xs">
+                              5 项
+                            </span>
+                          </div>
+                          <div className="max-h-48 overflow-y-auto p-4 space-y-2.5 text-xs font-bold text-slate-800">
+                            <div>id<span className="text-rose-600 font-black ml-0.5">(1)</span></div>
+                            <div>x100<span className="text-rose-600 font-black ml-0.5">(1)</span></div>
+                            <div>x101<span className="text-rose-600 font-black ml-0.5">(1)</span></div>
+                            <div>x102<span className="text-rose-600 font-black ml-0.5">(1)</span></div>
+                            <div>name<span className="text-rose-600 font-black ml-0.5">(1)</span></div>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Sec 2: DICOM */}
-                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-                      <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2.5 flex items-center">
-                        <span className="w-1.5 h-3 bg-blue-500 rounded-xs mr-2" />
-                        2. DICOM影像数据：
-                      </h4>
-                      <div className="space-y-1.5 pl-3.5">
-                        <div className="flex items-start space-x-2 text-xs text-amber-600 font-semibold">
-                          <span className="font-bold shrink-0 text-amber-700">！</span>
-                          <span>样例数据中比匿名化方案少2个字段：Media Storage SOP Class UID、Referring Physician Name</span>
+                    {/* Sec 2: DICOM影像数据 · 000001 */}
+                    <div>
+                      <div className="flex items-center space-x-2 mb-3">
+                        <span className="w-1.5 h-4 bg-blue-600 rounded-full inline-block" />
+                        <h4 className="font-extrabold text-slate-900 text-sm md:text-base tracking-tight">DICOM影像数据 &middot; 000001</h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Left: 实际数据中未出现的字段 */}
+                        <div className="rounded-xl border border-amber-200/90 bg-white overflow-hidden shadow-2xs">
+                          <div className="bg-amber-50/70 border-b border-amber-100/90 px-4 py-2.5 flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3.5 h-3.5 rounded-full border border-amber-500 text-amber-600 flex items-center justify-center text-[9px] font-black shrink-0">
+                                !
+                              </div>
+                              <span className="text-xs font-bold text-slate-800">实际数据中未出现的字段</span>
+                            </div>
+                            <span className="text-xs font-bold text-amber-800 bg-white border border-amber-200/80 px-2.5 py-0.5 rounded-full shadow-3xs">
+                              163 项
+                            </span>
+                          </div>
+                          <div className="max-h-48 overflow-y-auto p-4 space-y-2.5 text-xs font-bold text-slate-800">
+                            <div>Focal Spot(s)</div>
+                            <div>[Cell spacing]</div>
+                            <div>[SFOV Type]</div>
+                            <div>Patient Birth Name</div>
+                            <div>Other Patient IDs</div>
+                            <div>Other Patient Names</div>
+                            <div>Medical Record Locator</div>
+                            <div>Pregnancy Status</div>
+                            <div>Special Needs</div>
+                            <div>Patient State</div>
+                            <div>Admission ID</div>
+                            <div>Issuer of Admission ID</div>
+                            <div>Scheduled Study Location</div>
+                            <div>Scheduled Study Location Patient Transport Arrangement</div>
+                            <div>Reason for Study</div>
+                            <div>Requesting Physician</div>
+                            <div>Referring Physician's Name</div>
+                            <div>Physicians of Record</div>
+                            <div>Operators' Name</div>
+                            <div>Study Description</div>
+                            <div>Series Description</div>
+                          </div>
+                        </div>
+
+                        {/* Right: 方案中未添加字段 (出现文件数) */}
+                        <div className="rounded-xl border border-rose-200/90 bg-white overflow-hidden shadow-2xs">
+                          <div className="bg-rose-50/70 border-b border-rose-100/90 px-4 py-2.5 flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-rose-500 font-bold text-xs shrink-0 leading-none">✕</span>
+                              <span className="text-xs font-bold text-slate-800">方案中未添加字段 (出现文件数)</span>
+                            </div>
+                            <span className="text-xs font-bold text-rose-800 bg-white border border-rose-200/80 px-2.5 py-0.5 rounded-full shadow-3xs">
+                              8 项
+                            </span>
+                          </div>
+                          <div className="max-h-48 overflow-y-auto p-4 space-y-2.5 text-xs font-bold text-slate-800">
+                            <div>Source Application Entity Title<span className="text-rose-600 font-black ml-0.5">(4000)</span></div>
+                            <div>Secondary Capture Device ID<span className="text-rose-600 font-black ml-0.5">(4000)</span></div>
+                            <div>Date of Secondary Capture<span className="text-rose-600 font-black ml-0.5">(4000)</span></div>
+                            <div>Time of Secondary Capture<span className="text-rose-600 font-black ml-0.5">(4000)</span></div>
+                            <div>Secondary Capture Device Manufacturer<span className="text-rose-600 font-black ml-0.5">(4000)</span></div>
+                            <div>Secondary Capture Device Manufacturer's Model Name<span className="text-rose-600 font-black ml-0.5">(4000)</span></div>
+                            <div>Secondary Capture Device Software Versions<span className="text-rose-600 font-black ml-0.5">(4000)</span></div>
+                            <div>Digital Image Format Code<span className="text-rose-600 font-black ml-0.5">(4000)</span></div>
+                          </div>
                         </div>
                       </div>
                     </div>
-
-                    {/* Notice */}
-                    <p className="text-xs text-slate-500 leading-relaxed font-semibold bg-amber-50 border border-amber-100 p-3.5 rounded-lg">
-                      匿名化方案未包含选中数据的全部字段，请重新选择数据，或者暂存现有数据重新确认匿名化方案
-                    </p>
                   </div>
 
                   {/* Footer / Actions */}
-                  <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex items-center justify-end space-x-3">
-                    <button
-                      id="modal_temp_save_btn"
-                      onClick={() => {
-                        setShowSaveFailModal(false);
-                        onBack(); // "暂存（点击后跳转至项目管理页面）"
-                      }}
-                      className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider rounded shadow-3xs hover:shadow-xs transition-all active:scale-98 cursor-pointer"
-                    >
-                      暂存
-                    </button>
+                  <div className="bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-end space-x-4">
                     <button
                       id="modal_close_btn"
+                      type="button"
                       onClick={() => setShowSaveFailModal(false)}
-                      className="px-5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded border border-slate-200 transition-colors shadow-3xs cursor-pointer"
+                      className="px-6 py-2 bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold rounded-lg border border-slate-300 transition-colors shadow-3xs cursor-pointer"
                     >
-                      关闭弹窗
+                      关闭
+                    </button>
+                    <button
+                      id="modal_sync_diff_fields_btn"
+                      type="button"
+                      onClick={() => setShowSaveFailModal(false)}
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all active:scale-98 cursor-pointer flex items-center space-x-1.5"
+                    >
+                      <span>确认并同步差异字段</span>
                     </button>
                   </div>
 

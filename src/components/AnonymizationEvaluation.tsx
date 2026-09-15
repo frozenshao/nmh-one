@@ -3,7 +3,7 @@ import { Project, UploadState, FieldConfig } from "../types";
 import { 
   ArrowLeft, Play, BarChart2, X, Loader2, Sparkles, Plus, Search, 
   Server, Clock, AlertTriangle, CheckCircle2, Power, Eye, Settings2, 
-  ShieldCheck, HelpCircle, Info, Cpu
+  ShieldCheck, HelpCircle, Info, Cpu, ChevronDown, ChevronRight
 } from "lucide-react";
 import { STANDARD_CSV_FIELDS, STANDARD_DICOM_FIELDS } from "../lib/constants";
 import { DICOM_TAGS, ANONYMIZATION_FIELDS } from "./EditableSchemeForm";
@@ -19,7 +19,7 @@ interface TaskItem {
   id: string;
   name: string;
   modality: 'CSV 结构化文本数据' | 'DICOM 影像数据';
-  status: '等待执行' | '执行中' | '已完成' | '异常中断' | '手动结束';
+  status: '等待执行' | '执行中' | '已完成' | '异常中断' | '手动结束' | '启动中';
   servers: string[];
   startTime: string;
   endTime: string;
@@ -36,6 +36,139 @@ const SERVERS = [
   "服务器 B (瑞金医院 PACS 影像存储)",
   "服务器 C (张江去标识科研中心云)"
 ];
+
+// 媒体数据（DICOM影像数据 / 图片数据）目录树形结构弹窗
+function MediaDirectoryStatsModal({
+  data,
+  onClose
+}: {
+  data: any;
+  onClose: () => void;
+}) {
+  const isDicom = data.modality === "DICOM影像数据";
+  const title = isDicom ? "DICOM-frame_0001" : (data.category && data.category !== "-" ? `IMG-${data.category}` : "DICOM-frame_0001");
+  const rootName = "dicom";
+
+  const [rootExpanded, setRootExpanded] = useState<boolean>(true);
+  const [expandedSubDirs, setExpandedSubDirs] = useState<string[]>(["p1"]);
+
+  const toggleSubDir = (subDir: string) => {
+    setExpandedSubDirs(prev => 
+      prev.includes(subDir) ? prev.filter(s => s !== subDir) : [...prev, subDir]
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" id="dimension_stats_modal">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 text-left animate-scale-up">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+              <BarChart2 className="w-5 h-5" />
+            </div>
+            <h3 className="font-extrabold text-base text-slate-900 tracking-tight">
+              {title}
+            </h3>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-0 cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Summary line */}
+        <div className="flex items-center gap-6 sm:gap-8 text-sm font-bold text-slate-800 pb-4">
+          <div className="flex items-center">
+            <span className="text-slate-700">文件总数： </span>
+            <span className="font-extrabold text-slate-900 font-mono ml-1">4,000</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-slate-700">一级目录总数： </span>
+            <span className="font-extrabold text-slate-900 font-mono ml-1">10</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-slate-700">二级目录总数： </span>
+            <span className="font-extrabold text-slate-900 font-mono ml-1">100</span>
+          </div>
+        </div>
+
+        {/* Tree Container */}
+        <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white max-h-[460px] overflow-y-auto">
+          {/* Root Level */}
+          <div 
+            onClick={() => setRootExpanded(!rootExpanded)}
+            className="py-3 px-4 flex items-center border-b border-slate-100 hover:bg-slate-50/70 transition-colors cursor-pointer select-none"
+          >
+            {rootExpanded ? (
+              <ChevronDown className="w-4 h-4 text-slate-500 mr-2 shrink-0" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-slate-500 mr-2 shrink-0" />
+            )}
+            <span className="font-bold text-slate-900 text-sm">{rootName}</span>
+            <span className="font-bold text-blue-600 text-sm ml-1.5">(子目录数:10)</span>
+          </div>
+
+          {/* Level 1 Subdirs (p1 - p10) */}
+          {rootExpanded && (
+            <div>
+              {Array.from({ length: 10 }, (_, i) => `p${i + 1}`).map((subDir) => {
+                const isExpanded = expandedSubDirs.includes(subDir);
+                return (
+                  <div key={subDir}>
+                    <div 
+                      onClick={() => toggleSubDir(subDir)}
+                      className="py-3 px-4 pl-10 flex items-center border-b border-slate-100 hover:bg-slate-50/70 transition-colors cursor-pointer select-none"
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="w-4 h-4 text-slate-500 mr-2 shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-slate-500 mr-2 shrink-0" />
+                      )}
+                      <span className="font-bold text-slate-900 text-sm">{subDir}</span>
+                      <span className="font-bold text-blue-600 text-sm ml-1.5">(子目录数:10)</span>
+                    </div>
+
+                    {/* Level 2 Leaf Files (v001 - v010) */}
+                    {isExpanded && (
+                      <div className="bg-white">
+                        {Array.from({ length: 10 }, (_, j) => {
+                          const fileNum = String(j + 1).padStart(3, '0');
+                          const fileName = `v${fileNum}`;
+                          return (
+                            <div 
+                              key={fileName}
+                              className="py-3 px-4 pl-16 flex items-center border-b border-slate-100 hover:bg-slate-50/50 transition-colors select-none"
+                            >
+                              <span className="font-bold text-slate-900 text-sm">{fileName}</span>
+                              <span className="font-bold text-emerald-600 text-sm ml-1.5">(文件数:40)</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="pt-5 flex justify-end">
+          <button 
+            onClick={onClose}
+            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg cursor-pointer transition-colors shadow-sm"
+          >
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AnonymizationEvaluation({ project, onBack, uploadState, onUpdateProject }: AnonymizationEvaluationProps) {
   const getFieldStatsData = (fieldName: string, fieldNameZh: string) => {
@@ -278,7 +411,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
       failure: "0",
       status: "已完成" as const,
       duration: "1h5m",
-      dataSource: "住院信息数据终版"
+      dataSource: "test002.csv"
     },
     {
       modality: "CSV文本数据",
@@ -288,7 +421,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
       failure: "20",
       status: "已完成" as const,
       duration: "46min",
-      dataSource: "检查信息数据终版"
+      dataSource: "test9999.csv"
     },
     {
       modality: "CSV文本数据",
@@ -298,7 +431,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
       failure: "0",
       status: "异常中断" as const,
       duration: "15m",
-      dataSource: "检验信息数据终版"
+      dataSource: "test001.csv"
     },
     {
       modality: "DICOM影像数据",
@@ -309,7 +442,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
       status: "进行中" as const,
       progress: 34,
       duration: "1h56min",
-      dataSource: "bysy/djienf/rerrr"
+      dataSource: "disk01/data/dicom"
     },
     {
       modality: "图片数据",
@@ -320,7 +453,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
       status: "进行中" as const,
       progress: 12,
       duration: "1h56min",
-      dataSource: "bysy/djienf/bfgfg/drerre"
+      dataSource: "disk01/data/image"
     },
     {
       modality: "图片数据",
@@ -331,7 +464,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
       status: "进行中" as const,
       progress: 45,
       duration: "1h56min",
-      dataSource: "bysy/gferer/fbnbn"
+      dataSource: "disk01/data/image/record"
     }
   ]);
 
@@ -704,6 +837,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
           </div>
 
           {/* Filter condition and Launch task button bar */}
+          {/* Filter condition and Launch task button bar */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
             {/* Filter Dropdown */}
             <div className="flex items-center space-x-2 text-xs font-bold text-slate-700">
@@ -722,36 +856,27 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
               </select>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               {/* Display "计算中" during loading */}
               {globalKCalcState === 'calculating' && (
-                <span className="flex items-center space-x-1 px-3.5 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs font-black animate-pulse">
+                <span className="flex items-center space-x-1 px-3.5 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-black animate-pulse">
                   <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
                   <span>计算中</span>
                 </span>
               )}
 
-              {/* Display K-value after calculation completed */}
-              {globalKCalcState === 'completed' && globalKValue !== null && (
-                <span className="inline-flex items-center px-3.5 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-black">
-                  k值: {globalKValue}
-                </span>
-              )}
-
-              {/* "计算k值" Button */}
+              {/* Display K-value, matching 10.png pill box */}
               {globalKCalcState !== 'calculating' && (
-                <button
-                  onClick={() => {
-                    setGlobalKCalcState('calculating');
-                    setTimeout(() => {
-                      setGlobalKCalcState('completed');
-                      setGlobalKValue(8);
-                    }, 2000);
-                  }}
-                  className="flex items-center justify-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 px-4 py-2.5 rounded text-xs font-black uppercase tracking-wider transition-colors border border-slate-300 shadow-2xs cursor-pointer"
+                <div 
+                  className="flex items-center space-x-2 px-3.5 py-2 bg-blue-50/40 border border-blue-200 rounded-lg text-xs font-bold text-blue-700 shadow-2xs select-none"
+                  title="K值"
                 >
-                  <span>计算k值</span>
-                </button>
+                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                  <span className="text-blue-600 font-black">K 值</span>
+                  <span className="text-slate-900 font-black text-sm ml-1">
+                    {globalKValue !== null ? globalKValue : 0}
+                  </span>
+                </div>
               )}
 
               {/* Launch Task Button */}
@@ -759,7 +884,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 onClick={() => {
                   setIsLaunchModalOpen(true);
                 }}
-                className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded text-xs font-black uppercase tracking-wider shadow-md shadow-blue-200/50 transition-colors cursor-pointer border-0"
+                className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider shadow-md shadow-blue-200/50 transition-colors cursor-pointer border-0"
               >
                 <Plus className="w-4 h-4 stroke-[3px]" />
                 <span>创建任务</span>
@@ -767,261 +892,317 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
             </div>
           </div>
 
-          {/* Table List of Tasks */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-wider border-b border-slate-200">
-                    <th className="py-4.5 px-5">任务名称</th>
-                    <th className="py-4.5 px-4 text-center">任务状态</th>
-                    <th className="py-4.5 px-4 text-center">任务情况 (总/成功/失败)</th>
-                    <th className="py-4.5 px-4">任务开始 ~ 结束时间</th>
-                    <th className="py-4.5 px-4 text-center">耗时</th>
-                    <th className="py-4.5 px-5 text-center">操作</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
-                  {filteredTasks.length > 0 ? (
-                    filteredTasks.map((task) => {
-                      const isLatestTask = tasks[0] && task.id === tasks[0].id;
-                      return (
-                        <tr key={task.id} className="hover:bg-slate-50/50 transition-colors">
-                          {/* Task name & ID */}
-                          <td className="py-4 px-5">
-                            <div className="font-black text-slate-900">{task.name}</div>
-                          </td>
+          {/* 最新任务与历史任务列表 */}
+          {(() => {
+            // "20260715-001" 这条数据在最新任务中，其余数据在历史任务中
+            const latestTasks = filteredTasks.filter(task => task.name === "20260715-001");
+            const historyTasks = filteredTasks.filter(task => task.name !== "20260715-001");
 
-                          {/* Status badge with animated progression if running */}
-                          <td className="py-4 px-4 text-center">
-                            <div className="flex flex-col items-center justify-center space-y-1">
-                              <span className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${
-                                task.status === '已完成' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                task.status === '执行中' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                task.status === '启动中' ? 'bg-sky-50 text-sky-700 border-sky-200 animate-pulse' :
-                                task.status === '等待执行' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                task.status === '异常中断' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                                'bg-slate-100 text-slate-600 border-slate-300'
-                              }`}>
-                                {(task.status === '执行中' || task.status === '启动中') && <Loader2 className="w-2.5 h-2.5 animate-spin text-blue-600 mr-0.5" />}
-                                <span>{task.status === '执行中' ? '进行中' : task.status}</span>
-                              </span>
-                              {task.status === '执行中' && task.progress !== undefined && task.id !== 'TASK-1002' && (
-                                <div className="w-24 mt-1">
-                                  <div className="flex justify-between text-[9px] text-slate-400 font-bold mb-0.5">
-                                    <span>进度</span>
-                                    <span>{task.progress}%</span>
+            const renderTaskTable = (taskList: TaskItem[], emptyText: string, isLatestCard: boolean) => (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-500 text-xs font-bold border-b border-slate-200">
+                      <th className="py-4 px-5 font-bold">任务名称</th>
+                      <th className="py-4 px-4 font-bold text-center">任务状态</th>
+                      <th className="py-4 px-4 font-bold text-center">
+                        <div>任务情况</div>
+                        <div className="text-[10px] text-slate-400 font-normal flex items-center justify-center space-x-1.5 mt-0.5">
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00c5a0] mr-0.5"></span>
+                          <span>成功</span>
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 ml-1 mr-0.5"></span>
+                          <span>失败</span>
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-0.5"></span>
+                          <span>未完成</span>
+                          <span className="text-slate-300 ml-1.5">|</span>
+                          <span className="ml-1">成功/失败/总数</span>
+                        </div>
+                      </th>
+                      <th className="py-4 px-4 font-bold">任务开始 ~ 结束时间</th>
+                      <th className="py-4 px-4 font-bold text-center">耗时</th>
+                      <th className="py-4 px-5 font-bold text-center">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                    {taskList.length > 0 ? (
+                      taskList.map((task) => {
+                        const isLatestTask = isLatestCard || (tasks[0] && task.id === tasks[0].id);
+                        return (
+                          <tr key={task.id} className="hover:bg-slate-50/50 transition-colors">
+                            {/* Task name & ID */}
+                            <td className="py-4 px-5">
+                              <div className="font-black text-slate-900">{task.name}</div>
+                            </td>
+
+                            {/* Status badge with animated progression if running */}
+                            <td className="py-4 px-4 text-center">
+                              <div className="flex flex-col items-center justify-center space-y-1">
+                                <span className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${
+                                  task.status === '已完成' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                  task.status === '执行中' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                  task.status === '启动中' ? 'bg-sky-50 text-sky-700 border-sky-200 animate-pulse' :
+                                  task.status === '等待执行' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                  task.status === '异常中断' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                  'bg-slate-100 text-slate-600 border-slate-300'
+                                }`}>
+                                  {(task.status === '执行中' || task.status === '启动中') && <Loader2 className="w-2.5 h-2.5 animate-spin text-blue-600 mr-0.5" />}
+                                  <span>{task.status === '执行中' ? '进行中' : task.status}</span>
+                                </span>
+                                {task.status === '执行中' && task.progress !== undefined && task.id !== 'TASK-1002' && (
+                                  <div className="w-24 mt-1">
+                                    <div className="flex justify-between text-[9px] text-slate-400 font-bold mb-0.5">
+                                      <span>进度</span>
+                                      <span>{task.progress}%</span>
+                                    </div>
+                                    <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden border border-slate-200">
+                                      <div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${task.progress}%` }}></div>
+                                    </div>
                                   </div>
-                                  <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden border border-slate-200">
-                                    <div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${task.progress}%` }}></div>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Situation counts, formatted differently by data modality */}
+                            <td className="py-4 px-4">
+                              {task.status === '启动中' ? null : (() => {
+                                const total = task.total || 1000;
+                                const success = task.success || 0;
+                                const failure = task.failure || 0;
+
+                                const csv_ratio = 0.5;
+                                const dicom_ratio = 0.3;
+
+                                const csv_total = Math.round(total * csv_ratio);
+                                const csv_failure = Math.min(csv_total, Math.round(failure * csv_ratio));
+                                const progressPercent = total > 0 ? (success / total) : 0;
+                                const csv_success = Math.min(csv_total - csv_failure, Math.round(csv_total * progressPercent));
+
+                                const dicom_total = Math.round(total * dicom_ratio);
+                                const dicom_failure = Math.min(dicom_total, Math.round(failure * dicom_ratio));
+                                const dicom_success = Math.min(dicom_total - dicom_failure, Math.round(dicom_total * progressPercent));
+
+                                const image_total = Math.max(0, total - csv_total - dicom_total);
+                                const image_failure = Math.min(image_total, Math.max(0, failure - csv_failure - dicom_failure));
+                                const image_success = Math.min(image_total - image_failure, Math.max(0, success - csv_success - dicom_success));
+
+                                const renderModalityRow = (label: string, successVal: number, failureVal: number, totalVal: number) => {
+                                  if (totalVal <= 0) return null;
+                                  const sPct = Math.min(100, Math.max(0, (successVal / totalVal) * 100));
+                                  const fPct = Math.min(100 - sPct, Math.max(0, (failureVal / totalVal) * 100));
+
+                                  return (
+                                    <div className="flex items-center space-x-3 text-[11px] leading-none py-1">
+                                      {/* Label */}
+                                      <span className="text-slate-500 font-bold w-11 shrink-0 text-left">{label}</span>
+
+                                      {/* Progress Bar (green for success, amber for failure, light gray for uncompleted) */}
+                                      <div className="w-28 sm:w-36 h-2 bg-slate-100 rounded-full overflow-hidden flex shrink-0">
+                                        {sPct > 0 && (
+                                          <div 
+                                            className="bg-[#00c5a0] h-full transition-all duration-300" 
+                                            style={{ width: `${sPct}%` }} 
+                                          />
+                                        )}
+                                        {fPct > 0 && (
+                                          <div 
+                                            className="bg-amber-500 h-full transition-all duration-300" 
+                                            style={{ width: `${fPct}%` }} 
+                                          />
+                                        )}
+                                      </div>
+
+                                      {/* Counts: 成功 / 失败 / 总数 (No percentage) */}
+                                      <div className="font-mono text-[11px] flex items-center space-x-1 shrink-0">
+                                        <span className="text-teal-600 font-bold">{successVal}</span>
+                                        <span className="text-slate-300 font-normal">/</span>
+                                        <span className={failureVal > 0 ? "text-amber-500 font-bold" : "text-slate-400 font-bold"}>
+                                          {failureVal}
+                                        </span>
+                                        <span className="text-slate-300 font-normal">/</span>
+                                        <span className="text-slate-700 font-bold">{totalVal}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                };
+
+                                return (
+                                  <div className="flex flex-col space-y-1 font-bold text-[11px] leading-tight text-slate-700 min-w-[260px]">
+                                    {renderModalityRow("CSV", csv_success, csv_failure, csv_total)}
+                                    {renderModalityRow("DICOM", dicom_success, dicom_failure, dicom_total)}
+                                    {renderModalityRow("图片", image_success, image_failure, image_total)}
                                   </div>
-                                </div>
+                                );
+                              })()}
+                            </td>
+
+                            {/* Start~End time */}
+                            <td className="py-4 px-4 font-mono text-[11px] text-slate-600 whitespace-nowrap">
+                              <div>始: {task.startTime}</div>
+                              {task.status !== '启动中' && task.status !== '执行中' && task.endTime && task.endTime !== '-' && (
+                                <div className="mt-1 text-slate-400">终: {task.endTime}</div>
                               )}
-                            </div>
-                          </td>
+                            </td>
 
+                            {/* Duration column */}
+                            <td className="py-4 px-4 font-mono text-[11px] text-slate-600 text-center whitespace-nowrap">
+                              {getTaskDuration(task)}
+                            </td>
 
+                            {/* Action buttons matching status rules */}
+                            <td className="py-4 px-5 text-center">
+                              <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5">
+                                {/* Rerun Failed if conditions are met: latest task, completed, has failures */}
+                                {((isLatestTask && task.status === '已完成' && task.failure > 0) || task.name === '20260714-001') && (
+                                  <button
+                                    onClick={() => {
+                                      if (task.name === '20260714-001') {
+                                        setTaskNotSupportedAlertOpen(true);
+                                      } else {
+                                        setRerunConfirmTask(task);
+                                      }
+                                    }}
+                                    className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-black rounded text-[10px] shadow-2xs transition-all cursor-pointer border-0"
+                                  >
+                                    <span>失败重跑</span>
+                                  </button>
+                                )}
 
-                          {/* Situation counts, formatted differently by data modality */}
-                          <td className="py-4 px-4">
-                            {task.status === '启动中' ? null : (() => {
-                              const total = task.total || 1000;
-                              const success = task.success || 0;
-                              const failure = task.failure || 0;
-
-                              const csv_ratio = 0.5;
-                              const dicom_ratio = 0.3;
-
-                              const csv_total = Math.round(total * csv_ratio);
-                              const csv_failure = Math.min(csv_total, Math.round(failure * csv_ratio));
-                              const progressPercent = total > 0 ? (success / total) : 0;
-                              const csv_success = Math.min(csv_total - csv_failure, Math.round(csv_total * progressPercent));
-
-                              const dicom_total = Math.round(total * dicom_ratio);
-                              const dicom_failure = Math.min(dicom_total, Math.round(failure * dicom_ratio));
-                              const dicom_success = Math.min(dicom_total - dicom_failure, Math.round(dicom_total * progressPercent));
-
-                              const image_total = Math.max(0, total - csv_total - dicom_total);
-                              const image_failure = Math.min(image_total, Math.max(0, failure - csv_failure - dicom_failure));
-                              const image_success = Math.min(image_total - image_failure, Math.max(0, success - csv_success - dicom_success));
-
-                              const csv_pct = csv_total > 0 ? Math.round((csv_success / csv_total) * 100) : 0;
-                              const dicom_pct = dicom_total > 0 ? Math.round((dicom_success / dicom_total) * 100) : 0;
-                              const image_pct = image_total > 0 ? Math.round((image_success / image_total) * 100) : 0;
-
-                              return (
-                                <div className="flex flex-col space-y-1.5 font-bold text-[11px] leading-tight text-slate-700 min-w-[220px]">
-                                  {/* CSV */}
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-slate-500 font-medium">CSV：</span>
-                                    <span className="font-mono text-slate-900">
-                                      {csv_total}/{csv_success}/{csv_failure}
-                                      <span className="text-blue-600 ml-1 font-black">（{csv_pct}%）</span>
-                                    </span>
-                                  </div>
-                                  {/* DICOM */}
-                                  <div className="flex items-center justify-between border-t border-slate-100 pt-1">
-                                    <span className="text-slate-500 font-medium">DICOM：</span>
-                                    <span className="font-mono text-slate-900">
-                                      {dicom_total}/{dicom_success}/{dicom_failure}
-                                      <span className="text-indigo-600 ml-1 font-black">（{dicom_pct}%）</span>
-                                    </span>
-                                  </div>
-                                  {/* Image */}
-                                  <div className="flex items-center justify-between border-t border-slate-100 pt-1">
-                                    <span className="text-slate-500 font-medium">图片：</span>
-                                    <span className="font-mono text-slate-900">
-                                      {image_total}/{image_success}/{image_failure}
-                                      <span className="text-violet-600 ml-1 font-black">（{image_pct}%）</span>
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            })()}
-                          </td>
-
-                          {/* Start~End time */}
-                          <td className="py-4 px-4 font-mono text-[11px] text-slate-600 whitespace-nowrap">
-                            <div>始: {task.startTime}</div>
-                            {task.status !== '启动中' && task.status !== '执行中' && task.endTime && task.endTime !== '-' && (
-                              <div className="mt-1 text-slate-400">终: {task.endTime}</div>
-                            )}
-                          </td>
-
-                          {/* Duration column */}
-                          <td className="py-4 px-4 font-mono text-[11px] text-slate-600 text-center whitespace-nowrap">
-                            {getTaskDuration(task)}
-                          </td>
-
-                          {/* Action buttons matching status rules */}
-                          <td className="py-4 px-5 text-center">
-                            <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5">
-                              {/* Rerun Failed if conditions are met: latest task, completed, has failures */}
-                              {((isLatestTask && task.status === '已完成' && task.failure > 0) || task.name === '20260714-001') && (
-                                <button
-                                  onClick={() => {
-                                    if (task.name === '20260714-001') {
-                                      setTaskNotSupportedAlertOpen(true);
-                                    } else {
-                                      setRerunConfirmTask(task);
-                                    }
-                                  }}
-                                  className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-black rounded text-[10px] shadow-2xs transition-all cursor-pointer border-0"
-                                >
-                                  <span>失败重跑</span>
-                                </button>
-                              )}
-
-                              {/* 启动中: 显示【结束任务】 */}
-                              {task.status === '启动中' && (
-                                <button
-                                  onClick={() => setStopTaskConfirm(task)}
-                                  className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-black rounded text-[10px] border border-rose-200 transition-colors cursor-pointer"
-                                >
-                                  <span>结束任务</span>
-                                </button>
-                              )}
-
-                              {/* 等待执行: 显示【立即执行】 */}
-                              {task.status === '等待执行' && (
-                                <button
-                                  onClick={() => handleStartTaskImmediately(task.id)}
-                                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded text-[10px] shadow-2xs transition-colors cursor-pointer border-0"
-                                >
-                                  <span>立即执行</span>
-                                </button>
-                              )}
-
-                              {/* 执行中: 显示【结束任务、详情】 */}
-                              {task.status === '执行中' && (
-                                <>
+                                {/* 启动中: 显示【结束任务】 */}
+                                {task.status === '启动中' && (
                                   <button
                                     onClick={() => setStopTaskConfirm(task)}
                                     className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-black rounded text-[10px] border border-rose-200 transition-colors cursor-pointer"
                                   >
                                     <span>结束任务</span>
                                   </button>
+                                )}
+
+                                {/* 等待执行: 显示【立即执行】 */}
+                                {task.status === '等待执行' && (
                                   <button
-                                    onClick={() => setSelectedTaskForDetail(task)}
-                                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black rounded text-[10px] border border-slate-300 transition-colors cursor-pointer"
+                                    onClick={() => handleStartTaskImmediately(task.id)}
+                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded text-[10px] shadow-2xs transition-colors cursor-pointer border-0"
                                   >
-                                    <span>详情</span>
+                                    <span>立即执行</span>
                                   </button>
-                                </>
-                              )}
+                                )}
 
-                              {/* 已完成: 显示【详情】 */}
-                              {task.status === '已完成' && (
-                                <button
-                                  onClick={() => setSelectedTaskForDetail(task)}
-                                  className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-black rounded text-[10px] border border-blue-200 transition-colors cursor-pointer"
-                                >
-                                  <span>详情</span>
-                                </button>
-                              )}
-
-                              {/* 异常中断: 显示【立即执行、结束任务、详情】 */}
-                              {task.status === '异常中断' && (
-                                <>
-                                  {task.id === 'TASK-1004' ? (
-                                    <button
-                                      onClick={() => setTaskNotSupportedAlertOpen(true)}
-                                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded text-[10px] shadow-2xs transition-colors cursor-pointer border-0"
-                                    >
-                                      <span>继续执行</span>
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleStartTaskImmediately(task.id)}
-                                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded text-[10px] shadow-2xs transition-colors cursor-pointer border-0"
-                                    >
-                                      <span>立即执行</span>
-                                    </button>
-                                  )}
-
-                                  {task.id !== 'TASK-1004' && (
+                                {/* 执行中: 显示【结束任务、详情】 */}
+                                {task.status === '执行中' && (
+                                  <>
                                     <button
                                       onClick={() => setStopTaskConfirm(task)}
                                       className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-black rounded text-[10px] border border-rose-200 transition-colors cursor-pointer"
                                     >
                                       <span>结束任务</span>
                                     </button>
-                                  )}
+                                    <button
+                                      onClick={() => setSelectedTaskForDetail(task)}
+                                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black rounded text-[10px] border border-slate-300 transition-colors cursor-pointer"
+                                    >
+                                      <span>详情</span>
+                                    </button>
+                                  </>
+                                )}
 
+                                {/* 已完成: 显示【详情】 */}
+                                {task.status === '已完成' && (
+                                  <button
+                                    onClick={() => setSelectedTaskForDetail(task)}
+                                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-black rounded text-[10px] border border-blue-200 transition-colors cursor-pointer"
+                                  >
+                                    <span>详情</span>
+                                  </button>
+                                )}
+
+                                {/* 异常中断: 显示【立即执行、结束任务、详情】 */}
+                                {task.status === '异常中断' && (
+                                  <>
+                                    {task.id === 'TASK-1004' ? (
+                                      <button
+                                        onClick={() => setTaskNotSupportedAlertOpen(true)}
+                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded text-[10px] shadow-2xs transition-colors cursor-pointer border-0"
+                                      >
+                                        <span>继续执行</span>
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleStartTaskImmediately(task.id)}
+                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded text-[10px] shadow-2xs transition-colors cursor-pointer border-0"
+                                      >
+                                        <span>立即执行</span>
+                                      </button>
+                                    )}
+
+                                    {task.id !== 'TASK-1004' && (
+                                      <button
+                                        onClick={() => setStopTaskConfirm(task)}
+                                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-black rounded text-[10px] border border-rose-200 transition-colors cursor-pointer"
+                                      >
+                                        <span>结束任务</span>
+                                      </button>
+                                    )}
+
+                                    <button
+                                      onClick={() => setSelectedTaskForDetail(task)}
+                                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black rounded text-[10px] border border-slate-300 transition-colors cursor-pointer"
+                                    >
+                                      <span>详情</span>
+                                    </button>
+                                  </>
+                                )}
+
+                                {/* 手动结束: 显示【详情】(不显示立即执行) */}
+                                {task.status === '手动结束' && (
                                   <button
                                     onClick={() => setSelectedTaskForDetail(task)}
                                     className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black rounded text-[10px] border border-slate-300 transition-colors cursor-pointer"
                                   >
                                     <span>详情</span>
                                   </button>
-                                </>
-                              )}
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="py-10 text-center text-slate-400 font-medium bg-slate-50/50">
+                          {emptyText}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            );
 
-                              {/* 手动结束: 显示【详情】(不显示立即执行) */}
-                              {task.status === '手动结束' && (
-                                <button
-                                  onClick={() => setSelectedTaskForDetail(task)}
-                                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black rounded text-[10px] border border-slate-300 transition-colors cursor-pointer"
-                                >
-                                  <span>详情</span>
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-400 font-medium bg-slate-50/50">
-                        未匹配到符合条件的任务名称。
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+            return (
+              <div className="space-y-6">
+                {/* 1. 最新任务卡片（优先关注当前最新一条） */}
+                <div className="bg-white rounded-xl border border-blue-300 ring-2 ring-blue-100/70 overflow-hidden shadow-xs">
+                  <div className="px-6 py-4 border-b border-blue-100 flex items-center justify-between bg-blue-50/30">
+                    <div className="flex items-center space-x-2.5">
+                      <span className="px-2 py-0.5 bg-blue-600 text-white text-[11px] font-black rounded tracking-wide">最新</span>
+                      <span className="text-sm font-black text-slate-900">最新任务</span>
+                    </div>
+                    <span className="text-xs text-blue-600 font-medium">优先关注当前最新一条</span>
+                  </div>
+                  {renderTaskTable(latestTasks, "未匹配到符合条件的最新任务。", true)}
+                </div>
+
+                {/* 2. 历史任务卡片（仅可查看详情） */}
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+                  <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
+                    <span className="text-sm font-black text-slate-900">历史任务</span>
+                    <span className="text-xs text-slate-400 font-medium">仅可查看详情</span>
+                  </div>
+                  {renderTaskTable(historyTasks, "未匹配到符合条件的历史任务。", false)}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       ) : (
         /* ================= TASK DETAIL SUBPAGE VIEW ================= */
@@ -1836,7 +2017,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 fieldType: "num",
                 attr: "准标识符",
                 tech: "泛化",
-                param: "已配置 3 个映射",
+                param: "18-29→青年\n30-59→中年\n60-100→老年",
                 desc: "青年：18-29，中年：30-59，老年：60-100 2、80岁及以上",
                 canStat: true,
                 isKCalculated: "是",
@@ -2153,14 +2334,10 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                                   {/* 参数 */}
                                   <td className="py-3.5 px-4 text-xs text-slate-700 text-left leading-relaxed font-normal">
                                     {item.isAgeMapping ? (
-                                      <div className="flex items-center space-x-1.5 font-normal">
-                                        <span>已配置 3 个映射</span>
-                                        <button 
-                                          onClick={() => setShowReadOnlyMapping(true)}
-                                          className="text-blue-600 hover:text-blue-800 underline font-normal cursor-pointer bg-transparent border-0 p-0 text-xs"
-                                        >
-                                          查看
-                                        </button>
+                                      <div className="space-y-1 font-normal text-slate-700 text-xs py-0.5 leading-snug">
+                                        <div>18-29→青年</div>
+                                        <div>30-59→中年</div>
+                                        <div>60-100→老年</div>
                                       </div>
                                     ) : (
                                       item.param || "-"
@@ -2308,28 +2485,19 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
 
       {/* ================= NEW MODAL: DIMENSION STATISTICS (多维度去标识化执行统计) ================= */}
       {dimensionStatsModal && (() => {
+        const isMediaStats = dimensionStatsModal.modality === "DICOM影像数据" || dimensionStatsModal.modality === "图片数据";
+
+        if (isMediaStats) {
+          return (
+            <MediaDirectoryStatsModal 
+              data={dimensionStatsModal}
+              onClose={() => setDimensionStatsModal(null)}
+            />
+          );
+        }
+
         let rows: any[] = [];
-        if (dimensionStatsModal.modality === "DICOM影像数据") {
-          rows = [
-            { dim: "患者", total: "245", success: "240", failure: "5" },
-            { dim: "就诊", total: "450", success: "440", failure: "10" },
-            { dim: "文件", total: "8,677", success: "8,627", failure: "50" }
-          ];
-        } else if (dimensionStatsModal.modality === "图片数据") {
-          if (dimensionStatsModal.category === "门诊就诊记录") {
-            rows = [
-              { dim: "患者", total: "120", success: "115", failure: "5" },
-              { dim: "就诊", total: "180", success: "170", failure: "10" },
-              { dim: "文件", total: "1,348", success: "1,325", failure: "23" }
-            ];
-          } else {
-            rows = [
-              { dim: "患者", total: "210", success: "210", failure: "0" },
-              { dim: "就诊", total: "350", success: "350", failure: "0" },
-              { dim: "文件", total: "2,348", success: "2,348", failure: "0" }
-            ];
-          }
-        } else if (dimensionStatsModal.modality === "CSV文本数据" || dimensionStatsModal.modality === "CSV") {
+        if (dimensionStatsModal.modality === "CSV文本数据" || dimensionStatsModal.modality === "CSV") {
           if (dimensionStatsModal.category === "住院信息") {
             rows = [
               { dim: "患者", total: "800", success: "780", failure: "20" },
@@ -2351,8 +2519,6 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
           }
         }
 
-        const isMediaStats = dimensionStatsModal.modality === "DICOM影像数据" || dimensionStatsModal.modality === "图片数据";
-
         return (
           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" id="dimension_stats_modal">
             <div className="bg-white rounded-2xl shadow-xl border border-slate-300 max-w-xl w-full overflow-hidden animate-scale-up">
@@ -2361,7 +2527,7 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                 <div className="flex items-center space-x-2">
                   <BarChart2 className="w-5 h-5 text-blue-400" />
                   <h3 className="font-black text-sm uppercase tracking-wider">
-                    {isMediaStats ? `${dimensionStatsModal.modality}-${dimensionStatsModal.category}` : "多维度去标识化执行统计"}
+                    多维度去标识化执行统计
                   </h3>
                 </div>
                 <button 
@@ -2374,14 +2540,12 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
 
               {/* Body */}
               <div className="p-6 space-y-4 text-left">
-                {!isMediaStats && (
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <span className="text-xs font-black text-slate-500 uppercase tracking-widest block">当前分类情况</span>
-                    <span className="text-xs font-black text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded">
-                      {dimensionStatsModal.modality} &middot; {dimensionStatsModal.category}
-                    </span>
-                  </div>
-                )}
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-widest block">当前分类情况</span>
+                  <span className="text-xs font-black text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded">
+                    {dimensionStatsModal.modality} &middot; {dimensionStatsModal.category}
+                  </span>
+                </div>
 
                 <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
                   <table className="w-full text-left border-collapse text-xs">
@@ -2389,8 +2553,8 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                       <tr className="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-wider border-b border-slate-200">
                         <th className="py-3 px-5">统计维度</th>
                         <th className="py-3 px-4 text-center">总数</th>
-                        {!isMediaStats && <th className="py-3 px-4 text-center">成功数</th>}
-                        {!isMediaStats && <th className="py-3 px-4 text-center">失败数</th>}
+                        <th className="py-3 px-4 text-center">成功数</th>
+                        <th className="py-3 px-4 text-center">失败数</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-bold text-slate-700">
@@ -2398,12 +2562,10 @@ export default function AnonymizationEvaluation({ project, onBack, uploadState, 
                         <tr key={idx} className="hover:bg-slate-50/50">
                           <td className="py-3.5 px-5 text-slate-900 font-black">{row.dim}</td>
                           <td className="py-3.5 px-4 text-center font-mono text-slate-600">{row.total}</td>
-                          {!isMediaStats && <td className="py-3.5 px-4 text-center font-mono text-emerald-600">{row.success}</td>}
-                          {!isMediaStats && (
-                            <td className={`py-3.5 px-4 text-center font-mono ${parseInt(row.failure) > 0 ? "text-rose-600 font-black" : "text-slate-400"}`}>
-                              {row.failure}
-                            </td>
-                          )}
+                          <td className="py-3.5 px-4 text-center font-mono text-emerald-600">{row.success}</td>
+                          <td className={`py-3.5 px-4 text-center font-mono ${parseInt(row.failure) > 0 ? "text-rose-600 font-black" : "text-slate-400"}`}>
+                            {row.failure}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

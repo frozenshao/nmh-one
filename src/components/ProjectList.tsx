@@ -284,7 +284,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                      <span>方案生成</span>
                    </button>
  
-                   {/* 2. 数据上传 */}
+                   {/* 2. 数据源配置 */}
                    <button
                      disabled={!isSchemeCompleted}
                      onClick={() => onSelectAction(project, 'processing', 1)}
@@ -296,7 +296,7 @@ export default function ProjectList({ onSelectAction, projectUploadStates = {} }
                      id={`action_upload_${project.id}`}
                    >
                      {isUploadCompleted && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0 stroke-[3px]" />}
-                     <span>数据上传</span>
+                     <span>数据源配置</span>
                    </button>
  
                    {/* 3. 匿名化策略 */}

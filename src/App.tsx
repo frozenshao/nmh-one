@@ -255,6 +255,7 @@ export default function App() {
               <AnonymizationProcessing 
                 project={selectedProject} 
                 onBack={handleBackToDashboard} 
+                onGoToScheme={() => setCurrentView('scheme')}
                 initialStep={processingInitialStep || undefined}
                 onSaveSuccess={() => setShowSaveSuccess(true)}
                 uploadState={projectUploadStates[selectedProject.id] || {
